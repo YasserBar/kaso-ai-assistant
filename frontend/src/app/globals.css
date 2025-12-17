@@ -1,0 +1,90 @@
+@import "tailwindcss";
+@variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: #E53E50;
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0A032D;
+    --foreground: #ffffff;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Custom Smooth Scrollbar */
+@layer utilities {
+
+  /* Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+}
+
+@theme inline {
+  --scrollbar-thumb: rgba(229, 62, 80, 0.3);
+  /* Primary #E53E50 with low opacity */
+  --scrollbar-thumb-hover: #E53E50;
+  /* Full Primary */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --scrollbar-thumb: rgba(229, 62, 80, 0.3);
+    --scrollbar-thumb-hover: #E53E50;
+  }
+}
+
+.dark {
+  --scrollbar-thumb: rgba(229, 62, 80, 0.3);
+  --scrollbar-thumb-hover: #E53E50;
+}
+
+/* WebKit (Chrome, Edge, Safari) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-button {
+  display: none;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  /* Creates padding for floating effect */
+  background-clip: content-box;
+  /* vital for the floating border trick */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+  border: 0;
+  /* Remove border to fill space on hover if desired, or keep it */
+}
+
+html {
+  scroll-behavior: smooth;
+}
