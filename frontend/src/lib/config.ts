@@ -2,36 +2,36 @@
  * API Configuration
  */
 
-// Backend API URL
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// Backend API base (proxy root)
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
-// API Key for authentication
+// API Key is no longer sent from the browser; the server proxy adds it.
 export const API_KEY = process.env.NEXT_PUBLIC_API_KEY || '';
 
 /**
- * Default headers for API requests
+ * Default headers for API requests (client-side)
  */
 export function getApiHeaders(): HeadersInit {
     return {
         'Content-Type': 'application/json',
-        'X-API-Key': API_KEY,
+        // Do NOT send X-API-Key from the browser
     };
 }
 
 /**
- * API Endpoints
+ * API Endpoints (API_BASE_URL already points to '/api')
  */
 export const API_ENDPOINTS = {
     // Chat
-    chatStream: `${API_BASE_URL}/api/chat/stream`,
-    chat: `${API_BASE_URL}/api/chat`,
+    chatStream: `${API_BASE_URL}/chat/stream`,
+    chat: `${API_BASE_URL}/chat`,
 
     // Conversations
-    conversations: `${API_BASE_URL}/api/conversations`,
-    conversation: (id: string) => `${API_BASE_URL}/api/conversations/${id}`,
+    conversations: `${API_BASE_URL}/conversations`,
+    conversation: (id: string) => `${API_BASE_URL}/conversations/${id}`,
 
     // Search
-    searchConversations: `${API_BASE_URL}/api/search/conversations`,
-    searchKnowledge: `${API_BASE_URL}/api/search/knowledge`,
-    search: `${API_BASE_URL}/api/search`,
+    searchConversations: `${API_BASE_URL}/search/conversations`,
+    searchKnowledge: `${API_BASE_URL}/search/knowledge`,
+    search: `${API_BASE_URL}/search`,
 };
