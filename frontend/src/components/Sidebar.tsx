@@ -8,10 +8,8 @@ import {
     Trash2,
     X,
     Menu,
-    ChevronLeft,
     Moon,
-    Sun,
-    Globe
+    Sun
 } from 'lucide-react';
 import { fetchConversations, deleteConversation, searchConversations } from '@/lib/api';
 import type { ConversationSummary } from '@/lib/types';
@@ -46,7 +44,8 @@ export default function Sidebar({
     const [conversations, setConversations] = useState<ConversationSummary[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-    const [isSearching, setIsSearching] = useState(false);
+    // Removed unused isSearching state to satisfy ESLint
+    // const [isSearching, setIsSearching] = useState(false);
     const [isMobileOpen, setIsMobileOpen] = useState(false);
     const [mounted, setMounted] = useState(false);
 
@@ -82,7 +81,7 @@ export default function Sidebar({
         }
 
         try {
-            setIsSearching(true);
+            // setIsSearching(true); // removed unused state
             const results = await searchConversations(query);
             // Convert search results to conversation summaries
             const uniqueConvs = new Map<string, ConversationSummary>();
@@ -102,7 +101,7 @@ export default function Sidebar({
         } catch (error) {
             console.error('Search failed:', error);
         } finally {
-            setIsSearching(false);
+            // setIsSearching(false); // removed unused state
         }
     };
 
@@ -144,6 +143,7 @@ export default function Sidebar({
             <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                             src="/kaso_logo.png"
                             alt="Kaso Logo"
@@ -311,7 +311,7 @@ export default function Sidebar({
             {/* Mobile toggle button */}
             <button
                 onClick={() => setIsMobileOpen(true)}
-                className="lg:hidden fixed top-4 start-4 z-40 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg"
+                className="lg:hidden fixed top-4 start-4 z-40 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg text-gray-700 dark:text-gray-200"
             >
                 <Menu className="w-6 h-6" />
             </button>
