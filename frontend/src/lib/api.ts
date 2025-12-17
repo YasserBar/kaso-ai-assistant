@@ -7,7 +7,11 @@ import type {
     ConversationList,
     ConversationDetail,
     ConversationSummary,
-    SearchResponse
+    SearchResponse,
+    ApiConversationsList,
+    ApiConversationDetail,
+    ApiSearchResponse,
+    ChatStreamEvent,
 } from './types';
 
 /**
@@ -26,9 +30,9 @@ export async function fetchConversations(
         throw new Error('Failed to fetch conversations');
     }
 
-    const data = await response.json();
+    const data: ApiConversationsList = await response.json();
     return {
-        conversations: data.conversations.map((c: any) => ({
+        conversations: data.conversations.map((c) => ({
             id: c.id,
             title: c.title,
             preview: c.preview,
@@ -55,11 +59,11 @@ export async function fetchConversation(id: string): Promise<ConversationDetail>
         throw new Error('Failed to fetch conversation');
     }
 
-    const data = await response.json();
+    const data: ApiConversationDetail = await response.json();
     return {
         id: data.id,
         title: data.title,
-        messages: data.messages.map((m: any) => ({
+        messages: data.messages.map((m) => ({
             id: m.id,
             role: m.role,
             content: m.content,
@@ -84,12 +88,12 @@ export async function createConversation(title?: string): Promise<ConversationSu
         throw new Error('Failed to create conversation');
     }
 
-    const data = await response.json();
+    const data: ApiConversationDetail = await response.json();
     return {
         id: data.id,
         title: data.title,
-        preview: data.preview,
-        messageCount: data.message_count,
+        preview: '',
+        messageCount: data.messages?.length ?? 0,
         createdAt: new Date(data.created_at),
         updatedAt: new Date(data.updated_at),
     };
@@ -125,10 +129,10 @@ export async function searchConversations(
         throw new Error('Failed to search conversations');
     }
 
-    const data = await response.json();
+    const data: ApiSearchResponse = await response.json();
     return {
         query: data.query,
-        results: data.results.map((r: any) => ({
+        results: data.results.map((r) => ({
             conversationId: r.conversation_id,
             conversationTitle: r.conversation_title,
             messageContent: r.message_content,
@@ -147,7 +151,7 @@ export async function searchConversations(
 export async function* streamChat(
     message: string,
     conversationId?: string
-): AsyncGenerator<{ type: string; data: any }> {
+): AsyncGenerator<ChatStreamEvent> {
     // Initiate SSE stream via POST; backend emits sources, token, done, error events
     const response = await fetch(API_ENDPOINTS.chatStream, {
         method: 'POST',
@@ -180,12 +184,8 @@ export async function* streamChat(
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';
 
+        // We expect pairs of event/data lines but only parse 'data' JSON payloads
         for (const line of lines) {
-            // Fast parse of SSE pair: `event: <type>` then `data: <json>`
-            if (line.startsWith('event:')) {
-                const eventType = line.slice(6).trim();
-                continue;
-            }
             if (line.startsWith('data:')) {
                 const data = line.slice(5).trim();
                 if (data) {
@@ -193,16 +193,16 @@ export async function* streamChat(
                         const parsed = JSON.parse(data);
                         // Map backend payload keys to typed events for UI
                         if (parsed.token !== undefined) {
-                            yield { type: 'token', data: parsed.token };
+                            yield { type: 'token', data: String(parsed.token) };
                         } else if (parsed.sources !== undefined) {
-                            yield { type: 'sources', data: parsed.sources };
+                            yield { type: 'sources', data: parsed.sources as string[] };
                         } else if (parsed.conversation_id !== undefined) {
-                            yield { type: 'done', data: parsed.conversation_id };
+                            yield { type: 'done', data: String(parsed.conversation_id) };
                         } else if (parsed.error !== undefined) {
-                            yield { type: 'error', data: parsed.error };
+                            yield { type: 'error', data: String(parsed.error) };
                         }
                     } catch (e) {
-                        console.error('Failed to parse SSE data:', data);
+                        console.error('Failed to parse SSE data:', data, e);
                     }
                 }
             }
