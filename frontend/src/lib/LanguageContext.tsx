@@ -72,42 +72,39 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
  */
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
     const [language, setLanguageState] = useState<Language>('en');
-    const [mounted, setMounted] = useState(false);
+
+    const setLanguage = (lang: Language) => {
+        setLanguageState(lang);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('language', lang);
+        }
+    };
 
     useEffect(() => {
-        setMounted(true);
-        const savedLang = localStorage.getItem('language') as Language;
-    
-        if (savedLang && ['en', 'ar', 'de'].includes(savedLang)) {
-            setLanguageState(savedLang);
-        } else {
-            // Detect browser language and default to English if unsupported
-            const browserLang = navigator.language.split('-')[0].toLowerCase();
-            if (browserLang === 'ar') {
-                setLanguageState('ar');
-            } else if (browserLang === 'de') {
-                setLanguageState('de');
+        // Initialize language on client after mount to avoid SSR hydration mismatch
+        if (typeof window !== 'undefined') {
+            const savedLang = localStorage.getItem('language') as Language | null;
+            let initial: Language = 'en';
+            if (savedLang && ['en', 'ar', 'de'].includes(savedLang)) {
+                initial = savedLang;
             } else {
-                setLanguageState('en');
+                const browserLang = navigator.language.split('-')[0].toLowerCase();
+                if (browserLang === 'ar') initial = 'ar';
+                else if (browserLang === 'de') initial = 'de';
+            }
+            if (initial !== language) {
+                setLanguageState(initial);
             }
         }
     }, []);
 
-    const setLanguage = (lang: Language) => {
-        setLanguageState(lang);
-        localStorage.setItem('language', lang);
-        // Update HTML lang/dir to support RTL/LTR and accessibility
-        document.documentElement.lang = lang;
-        document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
-    };
-
     useEffect(() => {
-        if (mounted) {
-            // Keep document attributes in sync when language changes
+        // Keep document attributes in sync when language changes
+        if (typeof document !== 'undefined') {
             document.documentElement.lang = language;
             document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
         }
-    }, [language, mounted]);
+    }, [language]);
 
     const t = (key: string) => {
         return translations[key]?.[language] || key;
