@@ -128,3 +128,62 @@ python -m data_pipeline.cleaner    # Clean content
 python -m data_pipeline.chunker    # Split documents
 python -m data_pipeline.indexer    # Index to ChromaDB
 ```
+
+## Docker
+
+This backend supports Docker & Docker Compose for easy deployment.
+
+### Service Overview
+
+- Base image: `python:3.11-alpine` (lightweight)
+- Port: `8000` exposed to host (`8000:8000`)
+- Volume: `backend_data` persisted to `/app/data` (ChromaDB, conversation storage)
+- Environment: loaded from root `.env` (`API_SECRET_KEY`, `GROQ_API_KEY`, `CORS_ORIGINS`)
+
+### Root .env (example)
+
+```
+API_SECRET_KEY=change-me-in-production
+GROQ_API_KEY=
+CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+```
+
+> Ensure `CORS_ORIGINS` includes the frontend domain. For production, set your real domains (e.g., `https://app.example.com`).
+
+### Build & Run
+
+```bash
+docker-compose up --build
+```
+
+- Backend API: `http://localhost:8000`
+- Health checks:
+
+```bash
+curl http://localhost:8000/
+curl http://localhost:8000/health
+```
+
+### Authentication
+
+- All protected endpoints under `/api/*` require `X-API-Key` header with the value of `API_SECRET_KEY`.
+- When using the Next.js frontend via Docker Compose, the frontend server-side proxy injects `X-API-Key` automatically.
+
+### Data Persistence
+
+- Application data (including vector index) is stored in `/app/data` inside the container.
+- Docker Compose mounts a named volume `backend_data` so data persists across restarts.
+- To reset data, stop services and remove the volume or use the data pipeline utilities.
+- You can run `python verify_persistence.py` to quickly verify persistence behavior.
+
+### Alpine Notes
+
+- The backend Dockerfile uses Alpine Linux; system dependencies are installed via `apk add`.
+- Alpine is smaller than Debian-based images, which reduces image size and start-up time.
+
+### Production Tips
+
+- Use HTTPS and a reverse proxy (e.g., Nginx) in front of the backend.
+- Set strong `API_SECRET_KEY` and keep it out of client-side code.
+- Configure `CORS_ORIGINS` with your production frontend domain(s).
+- Provide a valid `GROQ_API_KEY` if RAG features require external LLM access.
