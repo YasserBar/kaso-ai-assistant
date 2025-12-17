@@ -29,11 +29,13 @@ services:
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
         NEXT_PUBLIC_API_KEY: ${NEXT_PUBLIC_API_KEY}
+        BACKEND_URL: ${BACKEND_URL}
     env_file:
       - .env
     environment:
       - NODE_ENV=${NODE_ENV}
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      - BACKEND_URL=${BACKEND_URL}
       - NEXT_PUBLIC_API_KEY=${NEXT_PUBLIC_API_KEY}
       - API_SECRET_KEY=${API_SECRET_KEY}
     depends_on:
