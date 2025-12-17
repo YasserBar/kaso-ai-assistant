@@ -85,3 +85,57 @@ export interface SSEErrorEvent {
 }
 
 export type SSEEvent = SSETokenEvent | SSESourcesEvent | SSEDoneEvent | SSEErrorEvent;
+
+// UI-friendly Chat Stream Event with 'data' field
+export type ChatStreamEvent =
+    | { type: 'token'; data: string }
+    | { type: 'sources'; data: string[] }
+    | { type: 'done'; data: string }
+    | { type: 'error'; data: string };
+
+// Raw API response types (snake_case from backend)
+export interface ApiConversation {
+    id: string;
+    title: string;
+    preview: string;
+    message_count: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ApiMessage {
+    id: string;
+    role: 'user' | 'assistant' | 'system';
+    content: string;
+    created_at: string;
+}
+
+export interface ApiConversationDetail {
+    id: string;
+    title: string;
+    messages: ApiMessage[];
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ApiConversationsList {
+    conversations: ApiConversation[];
+    total: number;
+    page: number;
+    page_size: number;
+}
+
+export interface ApiSearchResult {
+    conversation_id: string;
+    conversation_title: string;
+    message_content: string;
+    message_role: string;
+    relevance_score: number;
+    created_at: string;
+}
+
+export interface ApiSearchResponse {
+    query: string;
+    results: ApiSearchResult[];
+    total: number;
+}
