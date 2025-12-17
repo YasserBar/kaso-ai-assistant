@@ -1,39 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import ChatInterface from '@/components/ChatInterface';
-import { fetchConversation } from '@/lib/api';
-import type { ChatMessage } from '@/lib/types';
 
 export default function Home() {
   const [conversationId, setConversationId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-
-  // Load conversation messages when ID changes
-  const loadConversation = useCallback(async (id: string) => {
-    try {
-      const data = await fetchConversation(id);
-      setMessages(data.messages);
-    } catch (error) {
-      console.error('Failed to load conversation:', error);
-      setMessages([]);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (conversationId) {
-      loadConversation(conversationId);
-    } else {
-      setMessages([]);
-    }
-  }, [conversationId, loadConversation]);
 
   // Handle new conversation
   const handleNewConversation = () => {
     setConversationId(null);
-    setMessages([]);
   };
 
   // Handle conversation change from chat
@@ -58,7 +35,6 @@ export default function Home() {
         <ChatInterface
           conversationId={conversationId}
           onConversationChange={handleConversationChange}
-          initialMessages={messages}
         />
       </main>
     </div>
