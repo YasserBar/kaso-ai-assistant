@@ -13,8 +13,13 @@ services:
       GROQ_API_KEY: ${GROQ_API_KEY}
     volumes:
       - backend_data:/app/data
-    ports:
-      - "8000:8000"
+    # NOTE: If the backend is only consumed by other containers,
+    # you don't need to expose a host port. The frontend can
+    # reach the backend via the internal Docker network at
+    # http://backend:8000. To keep the backend internal-only,
+    # remove or comment out the 'ports' section below.
+    # ports:
+    #   - "8000:8000"
     restart: unless-stopped
 
   frontend:
