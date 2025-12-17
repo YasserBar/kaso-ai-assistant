@@ -129,6 +129,67 @@ npm run dev
 
 Visit [http://localhost:3000](http://localhost:3000)
 
+## Deployment – Approach 2: Docker Compose
+
+Use Docker Compose to run the frontend (Next.js) and backend (FastAPI) together.
+
+### Prerequisites
+- Docker and Docker Compose installed
+- Root `.env` file at the project root
+
+### Service Overview
+- Frontend `frontend`: exposed on port 3000
+- Backend `backend`: exposed on port 8000
+- Next.js server-side proxy forwards all requests from `/api/*` to the internal service `http://backend:8000/api/*`
+- Backend data persisted to a named volume `backend_data` mounted at `/app/data` inside the container
+
+### Root .env (example)
+```
+API_SECRET_KEY=change-me-in-production
+GROQ_API_KEY=
+CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+```
+- Ensure `CORS_ORIGINS` includes the frontend domain(s)
+- `API_SECRET_KEY` is used for authentication via the `X-API-Key` header and is injected server-side by the Next.js proxy; no API keys are sent from the browser
+
+### Build & Run
+```bash
+docker-compose up --build
+```
+- Frontend: http://localhost:3000
+- Backend: http://localhost:8000
+
+### Behind the Scenes
+- The Next.js route handler at `/api/*` proxies requests to `http://backend:8000/api/*` within the Docker network
+- The proxy injects the `X-API-Key` from `API_SECRET_KEY` and transparently supports Server-Sent Events (SSE)
+
+### Data Persistence
+- Application data (including the vector index) is stored in `/app/data` inside the backend container
+- The named volume `backend_data` keeps data across restarts
+- To reset data, stop services and remove the volume or use the data pipeline utilities
+- You can run `python backend/verify_persistence.py` to quickly verify persistence behavior
+
+### Useful Commands
+- Tail logs:
+```bash
+docker-compose logs -f backend
+docker-compose logs -f frontend
+```
+- Stop services:
+```bash
+docker-compose down
+```
+- Remove services with volumes (warning: will delete persisted data):
+```bash
+docker-compose down -v
+```
+
+### Production Tips
+- Use HTTPS and a reverse proxy (e.g., Nginx) in front of the services
+- Set a strong `API_SECRET_KEY` and keep it out of client-side code
+- Configure `CORS_ORIGINS` with your production frontend domain(s)
+- Provide a valid `GROQ_API_KEY` if external LLM features are required
+
 ## Project Structure
 
 ```
