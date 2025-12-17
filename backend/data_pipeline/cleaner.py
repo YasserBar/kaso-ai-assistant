@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import List, Dict, Optional
 
 from data_pipeline.logger import setup_pipeline_logger
+from data_pipeline.content_validator import ContentValidator
 
 
 class DataCleaner:
@@ -50,6 +51,9 @@ class DataCleaner:
 
         # Setup logger
         self.logger = setup_pipeline_logger("cleaner")
+
+        # Initialize content validator
+        self.validator = ContentValidator()
 
         # Create directories
         self.processed_dir.mkdir(parents=True, exist_ok=True)
@@ -123,10 +127,11 @@ class DataCleaner:
 
         Behavior:
         - Iterates over `raw/*.json` files
-        - Applies `clean_document` to each
+        - Validates content quality before processing
+        - Applies `clean_document` to valid content only
         - Skips documents whose cleaned content is < 50 characters
         - Writes cleaned output to `processed/*.json`
-        - Logs summary metrics (processed/skipped)
+        - Logs summary metrics (processed/skipped/failed validation)
 
         Returns:
             Number of processed documents successfully written.
@@ -141,12 +146,34 @@ class DataCleaner:
 
         processed_count = 0
         skipped_count = 0
+        failed_validation_count = 0
 
         for raw_file in raw_files:
             try:
                 with open(raw_file, 'r', encoding='utf-8') as f:
                     doc = json.load(f)
 
+                # Validate content quality BEFORE cleaning
+                content = doc.get('content', '')
+                title = doc.get('title', '')
+                url = doc.get('url', '')
+
+                is_valid, reason, metrics = self.validator.validate(content, title, url)
+
+                if not is_valid:
+                    self.logger.warning(f"VALIDATION FAILED: {raw_file.name}")
+                    self.logger.warning(f"  Reason: {reason}")
+                    self.logger.warning(f"  URL: {url}")
+                    self.logger.debug(f"  Metrics: {metrics}")
+                    failed_validation_count += 1
+                    skipped_count += 1
+                    continue
+
+                # Log if AI was used for validation
+                if metrics.get('used_ai'):
+                    self.logger.info(f"AI validated: {raw_file.name} - {reason}")
+
+                # Content passed validation - proceed with cleaning
                 cleaned = self.clean_document(doc)
 
                 # Skip if content too short after cleaning
@@ -169,7 +196,8 @@ class DataCleaner:
         self.logger.info("=" * 70)
         self.logger.info(f"CLEANING COMPLETE")
         self.logger.info(f"  Processed: {processed_count} documents")
-        self.logger.info(f"  Skipped: {skipped_count} documents")
+        self.logger.info(f"  Failed Validation: {failed_validation_count} documents")
+        self.logger.info(f"  Skipped: {skipped_count} documents (including validation failures)")
         self.logger.info("=" * 70)
 
         return processed_count
