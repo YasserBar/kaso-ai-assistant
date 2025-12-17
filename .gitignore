@@ -1,3 +1,16 @@
+# Data pipeline output directories
+backend/data/raw/
+backend/data/processed/
+backend/data/chunks/
+backend/data/chroma_db/
+backend/logs/
+
+# Data files
+kaso_data_sources.csv
+kaso_research_report.md
+backend/data/scrape_status.json
+backend/data/chat_history.db
+
 # Python
 __pycache__/
 *.py[cod]
@@ -27,3 +40,6 @@ out/
 # OS
 .DS_Store
 Thumbs.db
+
+# Test results
+backend/test_results.txt
