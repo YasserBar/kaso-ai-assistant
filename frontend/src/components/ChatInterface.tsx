@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Loader2, Bot, User, ExternalLink } from 'lucide-react';
+import { Send, Loader2, Bot, User } from 'lucide-react';
 import { streamChat } from '@/lib/api';
 import type { ChatMessage } from '@/lib/types';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -9,7 +9,6 @@ import { useLanguage } from '@/lib/LanguageContext';
 interface ChatInterfaceProps {
     conversationId: string | null;
     onConversationChange: (id: string) => void;
-    initialMessages?: ChatMessage[];
 }
 
 /**
@@ -21,21 +20,21 @@ interface ChatInterfaceProps {
 export default function ChatInterface({
     conversationId,
     onConversationChange,
-    initialMessages = []
 }: ChatInterfaceProps) {
     const { t } = useLanguage();
 
     // Core State
-    const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
     // Streaming State
-    const [sources, setSources] = useState<string[]>([]);
     const [streamingContent, setStreamingContent] = useState('');
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
+    // Track previous conversation id to differentiate between sidebar selection vs. first-message creation
+    const prevConversationIdRef = useRef<string | null>(null);
 
     // Scroll to bottom when messages change
     // Auto-scroll to bottom facilitates real-time reading
@@ -47,10 +46,26 @@ export default function ChatInterface({
         scrollToBottom();
     }, [messages, streamingContent, scrollToBottom]);
 
-    // Sync local state when conversation switches
+    // Reset local state when conversation switches
     useEffect(() => {
-        setMessages(initialMessages);
-    }, [initialMessages]);
+        const prev = prevConversationIdRef.current;
+        const curr = conversationId;
+
+        // If user clicked "New Chat" (curr null), clear area when not streaming
+        if (!isLoading && curr === null) {
+            setMessages([]);
+            setStreamingContent('');
+        }
+
+        // If switching between two existing conversations (not from null), and not currently streaming, reset local messages
+        if (!isLoading && prev !== null && curr !== null && prev !== curr) {
+            setMessages([]);
+            setStreamingContent('');
+        }
+
+        // Update previous id tracker
+        prevConversationIdRef.current = curr;
+    }, [conversationId, isLoading]);
 
     // Handle message submission and stream management
     const handleSubmit = async (e: React.FormEvent) => {
@@ -69,7 +84,6 @@ export default function ChatInterface({
         setInput('');
         setIsLoading(true);
         setStreamingContent('');
-        setSources([]);
 
         try {
             let fullContent = '';
@@ -78,14 +92,14 @@ export default function ChatInterface({
             for await (const event of streamChat(userMessage.content, conversationId || undefined)) {
                 switch (event.type) {
                     case 'token':
-                        fullContent += event.data;
+                        fullContent += event.data as string;
                         setStreamingContent(fullContent);
                         break;
                     case 'sources':
-                        setSources(event.data);
+                        // Sources section removed per request; ignore
                         break;
                     case 'done':
-                        newConversationId = event.data;
+                        newConversationId = event.data as string;
                         if (newConversationId && newConversationId !== conversationId) {
                             onConversationChange(newConversationId);
                         }
@@ -207,8 +221,6 @@ export default function ChatInterface({
                         </div>
                     </div>
                 )}
-
-                {/* Sources section removed as per user request */}
 
                 <div ref={messagesEndRef} />
             </div>
