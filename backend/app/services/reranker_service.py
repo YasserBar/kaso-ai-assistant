@@ -1,80 +1,88 @@
 """
 Reranker Service
 ================
-Cross-encoder reranking for improved retrieval accuracy
+Uses CrossEncoder model for reranking retrieved documents.
 """
 
-from typing import List, Tuple, Optional
+from typing import Optional, List, Tuple
 from sentence_transformers import CrossEncoder
+import logging
+import os
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class RerankerService:
     """
-    Service for reranking retrieved documents using cross-encoder
+    Singleton service for reranking using a CrossEncoder model.
     """
-    
     _instance: Optional['RerankerService'] = None
     _model: Optional[CrossEncoder] = None
-    
+
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
-    
+
     def initialize(self):
-        """Load the reranker model"""
+        """Load the CrossEncoder reranker model with persistent cache and larger timeouts"""
         if self._model is None:
-            self._model = CrossEncoder(
-                settings.reranker_model,
-                max_length=512
-            )
-    
+            try:
+                cache_dir = "/app/data/hf_cache"
+                os.makedirs(cache_dir, exist_ok=True)
+                os.environ.setdefault("HF_HUB_DOWNLOAD_TIMEOUT", "60")
+                os.environ.setdefault("HF_HUB_ETAG_TIMEOUT", "60")
+                self._model = CrossEncoder(
+                    settings.reranker_model,
+                    cache_folder=cache_dir
+                )
+                logger.info(f"✅ Reranker model loaded: {settings.reranker_model} (cache: {cache_dir})")
+            except Exception as e:
+                logger.error(f"❌ Failed to load reranker model '{settings.reranker_model}': {e}")
+                raise
+
     @property
     def model(self) -> CrossEncoder:
-        """Get the loaded model"""
         if self._model is None:
             self.initialize()
         return self._model
-    
+
     def rerank(
         self,
         query: str,
-        documents: List[str],
+        contents: List[str],
         top_k: int = 5
     ) -> List[Tuple[int, str, float]]:
         """
-        Rerank documents by relevance to query
-        
+        Rerank documents using CrossEncoder model
+
         Args:
             query: The search query
-            documents: List of documents to rerank
+            contents: List of document contents to rerank
             top_k: Number of top results to return
-            
+
         Returns:
-            List of tuples (original_index, document, score) sorted by score
+            List of tuples (original_index, content, score) sorted by score (highest first)
         """
-        if not documents:
+        if not contents:
             return []
-        
-        # Create query-document pairs
-        pairs = [(query, doc) for doc in documents]
-        
-        # Get scores from cross-encoder
+
+        # Prepare query-document pairs
+        pairs = [[query, content] for content in contents]
+
+        # Get scores from CrossEncoder
         scores = self.model.predict(pairs)
-        
-        # Combine with original indices
-        scored_docs = [
-            (idx, doc, float(score))
-            for idx, (doc, score) in enumerate(zip(documents, scores))
-        ]
-        
-        # Sort by score descending
-        scored_docs.sort(key=lambda x: x[2], reverse=True)
-        
-        # Return top-k
-        return scored_docs[:top_k]
+
+        # Create list of (index, content, score) tuples
+        results = [(i, content, float(score)) for i, (content, score) in enumerate(zip(contents, scores))]
+
+        # Sort by score in descending order
+        results.sort(key=lambda x: x[2], reverse=True)
+
+        # Return top_k results
+        return results[:top_k]
 
 
 # Singleton instance

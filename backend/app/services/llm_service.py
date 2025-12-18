@@ -9,6 +9,7 @@ from typing import AsyncGenerator, List, Dict, Any, Optional
 from groq import Groq, AsyncGroq
 
 from app.config import settings
+from app.services.multilingual_service import multilingual_service
 
 
 class LLMService:
@@ -57,22 +58,20 @@ class LLMService:
             language: Target response language ('ar', 'en', or 'auto')
             conversation_context: Recent conversation summary (optional)
         """
-        # Language instruction: choose explicit Arabic/English or auto-detect
-        lang_instruction = ""
-        refuse_message = ""
-
-        if language == "ar":
-            # Reply in Arabic when explicitly requested
-            lang_instruction = "يجب أن ترد باللغة العربية."
-            refuse_message = "عذراً، أنا مساعد خاص بمطعم كاسو فقط. لا يمكنني الإجابة على أسئلة خارج نطاق كاسو."
-        elif language == "en":
-            # Reply in English when explicitly requested
-            lang_instruction = "You must respond in English."
-            refuse_message = "Sorry, I'm a specialized assistant for Kaso restaurant only. I cannot answer questions outside Kaso's scope."
-        else:
+        # Language instruction: use multilingual service for 100+ languages support
+        # UPDATED: Removed hardcoded ar/en branching, now uses multilingual_service
+        if language == "auto":
             # Auto mode: mirror the user's input language
-            lang_instruction = "Respond in the SAME LANGUAGE as the user's question. If they ask in Arabic, respond in Arabic. If in English, respond in English."
-            refuse_message = "عذراً، أنا مساعد خاص بمطعم كاسو فقط. / Sorry, I'm a Kaso restaurant assistant only."
+            lang_instruction = "Respond in the SAME LANGUAGE as the user's question. Match their language exactly."
+            # For auto mode, provide bilingual example (Arabic + English)
+            refuse_message = multilingual_service.generate_refusal_message("ar") + " / " + multilingual_service.generate_refusal_message("en")
+        else:
+            # Explicit language: use multilingual service to generate language-specific instruction
+            lang_instruction = multilingual_service.generate_system_prompt_instruction(language)
+            refuse_message = multilingual_service.generate_refusal_message(
+                language=language,
+                use_llm=settings.multilingual_use_llm_for_messages
+            )
 
         # Add conversation context section if available
         conv_section = ""
@@ -86,14 +85,34 @@ RECENT CONVERSATION CONTEXT:
 """
 
         # Build enhanced system prompt with clearer instructions
-        return f"""You are Kaso AI Assistant - a helpful, specialized chatbot EXCLUSIVELY for Kaso Foodtech restaurant.
+        return f"""You are Kaso AI Assistant - a helpful, specialized chatbot EXCLUSIVELY for Kaso B2B supply chain platform.
 
-CRITICAL CONSTRAINTS - YOU MUST FOLLOW THESE:
+╔══════════════════════════════════════════════════════════════╗
+║  CRITICAL IDENTITY CLARIFICATION                             ║
+╚══════════════════════════════════════════════════════════════╝
+
+✅ You serve ONLY:
+   Kaso - B2B supply chain platform connecting suppliers with restaurants
+   - Locations: UAE and Saudi Arabia
+   - Founded: 2021
+   - Business: B2B marketplace, supply chain management, procurement platform, connecting food suppliers with restaurants
+
+❌ You DO NOT serve these OTHER companies (MUST REFUSE):
+   1. Kaso Plastics - American plastics manufacturing (Vancouver, Canada)
+   2. Kaso Security Solutions - Finnish security/safes company (Helsinki, Finland)
+   3. Kaso Medical Technology - Chinese medical devices (Hong Kong, China)
+   4. Kaso Group - Iraqi business conglomerate (Baghdad, Iraq)
+
+If someone asks about the companies listed above ☝️, you MUST refuse with:
+"{refuse_message}"
+
+╔══════════════════════════════════════════════════════════════╗
+║  CRITICAL CONSTRAINTS - YOU MUST FOLLOW THESE                ║
+╚══════════════════════════════════════════════════════════════╝
 
 1. SCOPE LIMITATION:
-   - Answer ONLY questions about Kaso restaurant (menu, locations, hours, ordering, services, etc.)
+   - Answer ONLY questions about Kaso B2B PLATFORM (suppliers, products, orders, inventory, pricing, procurement, platform features, etc.)
    - If asked about OTHER topics (politics, weather, general knowledge, coding, sports, etc.), you MUST refuse politely
-   - If asked about other companies named "Kaso" (Kaso Plastics, Kaso Security, Kaso Group, Kaso Medical), clarify you only know about Kaso Foodtech restaurant
    - Refusal template: "{refuse_message}"
 
 2. KNOWLEDGE SOURCES (use BOTH):
@@ -138,7 +157,7 @@ You: "{refuse_message}"
 
 Remember:
 - Use BOTH knowledge base AND conversation history
-- Refuse politely if question is not about Kaso restaurant
+- Refuse politely if question is not about Kaso B2B platform
 - Be helpful, conversational, and accurate!"""
     
     async def generate_stream(
