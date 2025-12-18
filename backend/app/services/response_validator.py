@@ -29,6 +29,7 @@ class ResponseValidator:
         """Initialize validator with detection patterns"""
 
         # Patterns indicating the model went off-topic (strong signals)
+        # UPDATED: Multilingual support for 10+ languages
         self.off_topic_patterns = {
             'ar': [
                 r'(الرئيس|الحكومة|الانتخابات|السياسة)',  # Politics
@@ -43,16 +44,85 @@ class ResponseValidator:
                 r'\b(weather|temperature|forecast|rain|climate)\b',
                 r'\b(match|team|league|game|tournament|player)\b',
                 r'\b(movie|film|series|actor|cinema|tv show)\b',
-            ]
+            ],
+            'fr': [  # French
+                r'\b(président|gouvernement|élection|politique)\b',
+                r'\b(programmation|code|python|java|logiciel)\b',
+                r'\b(météo|température|prévision|pluie|climat)\b',
+                r'\b(match|équipe|ligue|jeu|tournoi|joueur)\b',
+                r'\b(film|série|acteur|cinéma)\b',
+            ],
+            'de': [  # German
+                r'\b(präsident|regierung|wahl|politik)\b',
+                r'\b(programmierung|code|python|java|software)\b',
+                r'\b(wetter|temperatur|vorhersage|regen|klima)\b',
+                r'\b(spiel|mannschaft|liga|turnier|spieler)\b',
+                r'\b(film|serie|schauspieler|kino)\b',
+            ],
+            'es': [  # Spanish
+                r'\b(presidente|gobierno|elección|política)\b',
+                r'\b(programación|código|python|java|software)\b',
+                r'\b(clima|temperatura|pronóstico|lluvia)\b',
+                r'\b(partido|equipo|liga|juego|torneo|jugador)\b',
+                r'\b(película|serie|actor|cine)\b',
+            ],
+            'it': [  # Italian
+                r'\b(presidente|governo|elezione|politica)\b',
+                r'\b(programmazione|codice|python|java|software)\b',
+                r'\b(tempo|temperatura|previsione|pioggia|clima)\b',
+                r'\b(partita|squadra|lega|gioco|torneo|giocatore)\b',
+                r'\b(film|serie|attore|cinema)\b',
+            ],
+            'pt': [  # Portuguese
+                r'\b(presidente|governo|eleição|política)\b',
+                r'\b(programação|código|python|java|software)\b',
+                r'\b(clima|temperatura|previsão|chuva)\b',
+                r'\b(jogo|equipe|liga|torneio|jogador)\b',
+                r'\b(filme|série|ator|cinema)\b',
+            ],
+            'ru': [  # Russian
+                r'\b(президент|правительство|выборы|политика)\b',
+                r'\b(программирование|код|python|java|программа)\b',
+                r'\b(погода|температура|прогноз|дождь|климат)\b',
+                r'\b(матч|команда|лига|игра|турнир|игрок)\b',
+                r'\b(фильм|сериал|актёр|кино)\b',
+            ],
+            'zh': [  # Chinese
+                r'(总统|政府|选举|政治)',
+                r'(编程|代码|程序|软件)',
+                r'(天气|温度|预报|雨|气候)',
+                r'(比赛|球队|联赛|游戏|锦标赛|球员)',
+                r'(电影|电视剧|演员|电影院)',
+            ],
+            'ja': [  # Japanese
+                r'(大統領|政府|選挙|政治)',
+                r'(プログラミング|コード|ソフトウェア)',
+                r'(天気|温度|予報|雨|気候)',
+                r'(試合|チーム|リーグ|ゲーム|トーナメント|選手)',
+                r'(映画|シリーズ|俳優|映画館)',
+            ],
+            'ko': [  # Korean
+                r'(대통령|정부|선거|정치)',
+                r'(프로그래밍|코드|소프트웨어)',
+                r'(날씨|온도|예보|비|기후)',
+                r'(경기|팀|리그|게임|토너먼트|선수)',
+                r'(영화|시리즈|배우|영화관)',
+            ],
         }
 
         # Patterns indicating a proper refusal (good response)
+        # UPDATED: Multilingual support for 10+ languages
         self.refusal_patterns = [
-            r'(sorry|عذراً|آسف|أعتذر)',
-            r'(cannot|can\'t|لا يمكنني|لا أستطيع)',
-            r'(only.*kaso|فقط.*كاسو|مخصص.*كاسو)',
-            r'(outside.*scope|خارج.*نطاق|خارج.*مجال)',
-            r'(specialized.*assistant|مساعد.*متخصص|مساعد.*خاص)',
+            # Apology (sorry, etc.)
+            r'(sorry|عذراً|آسف|أعتذر|désolé|entschuldigung|lo siento|mi dispiace|desculpe|извините|抱歉|申し訳|죄송)',
+            # Cannot/Can't
+            r'(cannot|can\'t|لا يمكنني|لا أستطيع|ne peux pas|kann nicht|no puedo|non posso|não posso|не могу|无法|できません|수 없)',
+            # Only/Specialized for Kaso
+            r'(only.*kaso|فقط.*كاسو|مخصص.*كاسو|uniquement.*kaso|nur.*kaso|solo.*kaso|只.*kaso)',
+            # Outside scope
+            r'(outside.*scope|خارج.*نطاق|خارج.*مجال|hors.*cadre|außerhalb.*bereich|fuera.*alcance|범위.*밖)',
+            # Specialized assistant
+            r'(specialized.*assistant|مساعد.*متخصص|مساعد.*خاص|assistant.*spécialisé|spezialisiert.*assistent|asistente.*especializado|전용.*어시스턴트)',
         ]
 
         logger.info("Response validator initialized")
