@@ -39,7 +39,7 @@ export default function Sidebar({
     onNewConversation,
     refreshTrigger = 0,
 }: SidebarProps) {
-    const { theme, setTheme } = useTheme();
+    const { theme, setTheme, resolvedTheme } = useTheme();
     const { language, setLanguage, t } = useLanguage();
     const [conversations, setConversations] = useState<ConversationSummary[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -332,11 +332,11 @@ export default function Sidebar({
                 <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('theme')}</span>
                     <button
-                        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                        onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
                         className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
                         aria-label="Toggle theme"
                     >
-                        {mounted && theme === 'dark' ? (
+                        {mounted && resolvedTheme === 'dark' ? (
                             <Moon className="w-4 h-4 text-primary" />
                         ) : mounted ? (
                             <Sun className="w-4 h-4 text-orange-500" />
