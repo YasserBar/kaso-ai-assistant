@@ -1,7 +1,7 @@
 # Backend Dockerfile for FastAPI (uvicorn)
-# Uses Python 3.11 slim and installs required system deps for some Python packages
+# Uses Python 3.13 slim and installs required system deps for some Python packages
 
-FROM python:3.11-slim
+FROM python:3.13-slim
 
 # Prevent Python from writing .pyc files and enable unbuffered logs
 # Increase HuggingFace timeouts significantly for slow connections
