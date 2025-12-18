@@ -14,13 +14,28 @@ Web interface for Kaso AI Assistant built with Next.js and Tailwind CSS.
 
 ## Setup
 
+### Quick Setup (Recommended)
+
+Use the setup scripts to automatically install dependencies and configure environment:
+
+**Windows:**
+```bash
+setup.bat
+```
+
+**Linux/Mac:**
+```bash
+chmod +x setup.sh
+./setup.sh
+```
+
 ### Prerequisites
 
 - Node.js 18+
-- Docker & Docker Compose
-- Backend service exposed at `http://localhost:8000` (via docker-compose)
+- Docker & Docker Compose (optional, for production)
+- Backend service running at `http://localhost:8000`
 
-### Installation
+### Manual Installation
 
 ```bash
 # Install dependencies
@@ -51,18 +66,23 @@ Root `.env` (used by docker-compose):
 ## Project Structure
 
 ```
-src/
-├── app/
-│   ├── layout.tsx          # Root layout with fonts
-│   ├── page.tsx            # Main chat page (client component)
-│   └── globals.css         # Global styles
-├── components/
-│   ├── ChatInterface.tsx   # Chat messages + input
-│   └── Sidebar.tsx         # Conversation history
-└── lib/
-    ├── api.ts              # API client with SSE streaming
-    ├── config.ts           # Configuration (API_BASE_URL = '/api')
-    └── types.ts            # TypeScript types
+frontend/
+├── setup.bat               # Quick setup (Windows)
+├── setup.sh                # Quick setup (Linux/Mac)
+└── src/
+    ├── app/
+    │   ├── layout.tsx      # Root layout with fonts
+    │   ├── page.tsx        # Main chat page (client component)
+    │   ├── globals.css     # Global styles
+    │   └── api/            # API route handlers (proxy)
+    ├── components/
+    │   ├── ChatInterface.tsx   # Chat messages + input
+    │   └── Sidebar.tsx         # Conversation history
+    └── lib/
+        ├── api.ts              # API client with SSE streaming
+        ├── config.ts           # Configuration (API_BASE_URL = '/api')
+        ├── types.ts            # TypeScript types
+        └── LanguageContext.tsx # Internationalization context
 ```
 
 ## API Integration & Architecture

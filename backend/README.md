@@ -4,14 +4,22 @@ FastAPI backend with RAG (Retrieval Augmented Generation) for intelligent Q&A.
 
 ## Features
 
+### Core
 - 🚀 **FastAPI** - High-performance async API
 - ⚡ **uvloop** - Enhanced async performance (Linux/Mac)
 - 🔒 **API Key Auth** - Secure endpoints with X-API-Key header
 - 📡 **SSE Streaming** - Real-time response streaming
 - 🧠 **RAG Pipeline** - Retrieve, Rerank, Generate
-- 🌍 **Multilingual** - Arabic and English support
+- 🌍 **Multilingual** - Supports 100+ languages
 - 💾 **SQLite** - Async conversation storage
 - 🔍 **Vector Search** - ChromaDB for semantic search
+
+### Smart Services
+- 🎯 **Intent Classification** - Multi-layer filtering (keyword → embedding → LLM)
+- ✅ **Response Validation** - Hallucination detection and quality checks
+- 🔢 **Token Management** - Sliding window + summarization for context optimization
+- 🏢 **Company Disambiguation** - Distinguishes Kaso B2B from other companies
+- 💬 **Conversation Manager** - Query reformulation for better follow-ups
 
 ## Requirements
 
@@ -105,11 +113,17 @@ backend/
 │   │   ├── database.py      # SQLAlchemy models
 │   │   └── schemas.py       # Pydantic schemas
 │   └── services/
-│       ├── embedding_service.py  # Text embeddings
-│       ├── chroma_service.py     # Vector DB
-│       ├── reranker_service.py   # Reranking
-│       ├── llm_service.py        # Groq API
-│       └── rag_service.py        # RAG pipeline
+│       ├── rag_service.py           # RAG pipeline orchestrator
+│       ├── llm_service.py           # Groq API integration
+│       ├── embedding_service.py     # Text embeddings
+│       ├── chroma_service.py        # Vector DB operations
+│       ├── reranker_service.py      # Cross-encoder reranking
+│       ├── intent_classifier.py     # Off-topic query filtering
+│       ├── response_validator.py    # Hallucination detection
+│       ├── token_manager.py         # Context window optimization
+│       ├── conversation_manager.py  # Query reformulation
+│       ├── company_disambiguator.py # Company name disambiguation
+│       └── multilingual_service.py  # Multilingual operations
 ├── data_pipeline/           # Data processing
 └── data/                    # Data storage
 ```

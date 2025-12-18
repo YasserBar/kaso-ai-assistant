@@ -5,8 +5,37 @@ Flexible data pipeline for collecting, processing, and indexing knowledge for Ka
 ## Overview
 
 ```
-[URLs/Files] → [Scraper] → [Cleaner] → [Chunker] → [Indexer] → [ChromaDB]
+[URLs/Markdown Files] → [Scraper/Direct] → [Cleaner] → [Chunker] → [Indexer] → [ChromaDB]
 ```
+
+## Data Sources
+
+The pipeline supports two types of data sources:
+
+| Source Type | Description | Example |
+|-------------|-------------|---------|
+| **URLs** | Web pages scraped automatically | `kaso_data_sources.csv` |
+| **Markdown Files** | Research reports, documentation, summaries | `kaso_research_report.md` |
+
+### Markdown Files (Recommended for Custom Content)
+
+You can add any `.md` file containing research, summaries, or documentation about Kaso:
+
+```bash
+# Add a research report or summary
+python -m data_pipeline.run_pipeline --markdown path/to/your_summary.md
+
+# Add multiple markdown files
+python -m data_pipeline.chunker --markdown report1.md
+python -m data_pipeline.chunker --markdown report2.md
+python -m data_pipeline.indexer
+```
+
+**Best practices for markdown files:**
+- Use clear headings (`#`, `##`, `###`) for better chunking
+- Include relevant keywords in Arabic and English
+- Keep paragraphs focused on single topics
+- Add context about sources when relevant
 
 ## ✅ Incremental Updates
 

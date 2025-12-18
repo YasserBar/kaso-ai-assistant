@@ -7,16 +7,26 @@ AI-powered assistant for Kaso. Ask questions about Kaso and get intelligent answ
 
 ## Features
 
+### Core AI
 - 🧠 **RAG-based AI**: Retrieval Augmented Generation for accurate answers
 - 🌍 **Multilingual**: Supports 100+ languages (Arabic, English, French, Spanish, German, etc.)
   - Multilingual embedding model: `paraphrase-multilingual-MiniLM-L12-v2`
   - Multilingual reranker: `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1`
-- 🌐 **UI Localization**: Full interface support for 3 languages (English, Arabic, German) with RTL support
+- 🔍 **Advanced Retrieval**: Vector search + reranking for better accuracy
 - ⚡ **Fast Streaming**: Real-time response streaming with Groq LPU
-- 💬 **Chat History**: Persistent conversation history with search
+
+### Smart Services
+- 🎯 **Intent Classification**: Multi-layer filtering to detect off-topic queries
+- ✅ **Response Validation**: Hallucination detection and quality checks
+- 🔢 **Token Management**: Intelligent context window optimization
+- 🏢 **Company Disambiguation**: Distinguishes Kaso B2B from other companies named Kaso
+- 💬 **Conversation Context**: Query reformulation for better follow-up handling
+
+### User Experience
+- 🌐 **UI Localization**: Full interface support for 3 languages (English, Arabic, German) with RTL support
+- 📜 **Chat History**: Persistent conversation history with search
 - 🔒 **Secure**: API key authentication
 - 📱 **Responsive**: Works on desktop and mobile
-- 🔍 **Advanced Retrieval**: Vector search + reranking for better accuracy
 
 ## Architecture
 
@@ -46,13 +56,41 @@ AI-powered assistant for Kaso. Ask questions about Kaso and get intelligent answ
 
 ## Quick Start
 
+### One-Click Start (Windows)
+
+After initial setup, use the one-click runner:
+
+```bash
+# Starts both backend and frontend, opens browser
+run_all.bat
+```
+
 ### Prerequisites
 
 - Python 3.10+
 - Node.js 18+
 - Groq API Key ([Get free key](https://console.groq.com/))
 
-### 1. Clone and Setup Backend
+### Setup Scripts
+
+**Full project setup (Linux/Mac):**
+```bash
+chmod +x setup.sh
+./setup.sh
+```
+
+**Frontend setup only:**
+```bash
+cd frontend
+# Windows
+setup.bat
+# Linux/Mac
+chmod +x setup.sh && ./setup.sh
+```
+
+### Manual Setup
+
+#### 1. Clone and Setup Backend
 
 ```bash
 cd backend
@@ -195,22 +233,37 @@ docker-compose down -v
 
 ```
 kaso_ai_assistant/
+├── run_all.bat                 # One-click runner (Windows)
+├── setup.sh                    # Full project setup (Linux/Mac)
 ├── backend/                    # FastAPI Backend
 │   ├── app/
 │   │   ├── api/               # API endpoints
 │   │   ├── middleware/        # Auth middleware
 │   │   ├── models/            # Database & Pydantic models
 │   │   └── services/          # Business logic
+│   │       ├── rag_service.py           # RAG pipeline
+│   │       ├── llm_service.py           # Groq API
+│   │       ├── embedding_service.py     # Text embeddings
+│   │       ├── reranker_service.py      # Reranking
+│   │       ├── chroma_service.py        # Vector DB
+│   │       ├── intent_classifier.py     # Intent classification
+│   │       ├── response_validator.py    # Response validation
+│   │       ├── token_manager.py         # Token budget management
+│   │       ├── conversation_manager.py  # Context management
+│   │       ├── company_disambiguator.py # Company disambiguation
+│   │       └── multilingual_service.py  # Multilingual support
 │   ├── data_pipeline/         # Data processing
 │   │   ├── scraper.py         # URL scraper
 │   │   ├── cleaner.py         # Text cleaner
 │   │   ├── chunker.py         # Text splitter
 │   │   └── indexer.py         # ChromaDB indexer
 │   └── data/
-│       └── kaso_data_sources.csv  # URL sources
+│       ├── kaso_data_sources.csv  # URL sources
 │       └── chroma_db/         # Vector database
 │
 ├── frontend/                   # Next.js Frontend
+│   ├── setup.bat              # Frontend setup (Windows)
+│   ├── setup.sh               # Frontend setup (Linux/Mac)
 │   └── src/
 │       ├── app/               # Next.js app router
 │       ├── components/        # React components
@@ -235,7 +288,43 @@ All endpoints require `X-API-Key` header.
 
 ## Adding New Data Sources
 
-### Method 1: Add URLs to scrape
+The knowledge base can be expanded with URLs or Markdown files (research reports, summaries, documentation).
+
+### Method 1: Add Markdown Files (Recommended for Custom Content)
+
+Best for: Research reports, summaries, documentation, custom knowledge
+
+```bash
+cd backend
+
+# Add a single markdown file
+python -m data_pipeline.run_pipeline --markdown ../kaso_research_report.md
+
+# Or add multiple files manually
+python -m data_pipeline.chunker --markdown ../summary1.md
+python -m data_pipeline.chunker --markdown ../summary2.md
+python -m data_pipeline.indexer
+```
+
+**Example markdown structure:**
+```markdown
+# Topic Title
+
+## Section 1
+Content about Kaso...
+
+## Section 2
+More details...
+```
+
+**Tips for markdown files:**
+- Use clear headings (`#`, `##`) for better chunking
+- Include keywords in Arabic and English for better search
+- Keep paragraphs focused on single topics
+
+### Method 2: Add URLs to scrape
+
+Best for: External web pages, articles, blog posts
 
 1. Add URL to `backend/data/kaso_data_sources.csv`:
 ```csv
@@ -243,26 +332,13 @@ All endpoints require `X-API-Key` header.
 29,https://new-source.com/article
 ```
 
-2. Run the scraper and pipeline:
+2. Run the pipeline:
 ```bash
 cd backend
-# Scrape new URLs only
-python -m data_pipeline.scraper
-
-# Process and index (skip scraping)
-python -m data_pipeline.run_pipeline --no-scrape
+python -m data_pipeline.run_pipeline
 ```
 
-### Method 2: Add markdown files directly
-
-1. Place your markdown file in the project root or `backend/data/`
-
-2. Run the chunker and indexer:
-```bash
-cd backend
-python -m data_pipeline.chunker --markdown path/to/your/file.md
-python -m data_pipeline.indexer
-```
+See [Data Pipeline Documentation](backend/data_pipeline/README.md) for more details.
 
 ## Tech Stack
 
