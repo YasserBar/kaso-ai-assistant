@@ -14,7 +14,7 @@ from consuming expensive LLM resources.
 
 import re
 import logging
-from typing import Tuple, Dict, List
+from typing import Tuple, Dict, List, Optional
 from enum import Enum
 
 logger = logging.getLogger(__name__)
@@ -46,24 +46,30 @@ class IntentClassifier:
         self.kaso_keywords = {
             'ar': [
                 'كاسو', 'كازو', 'kaso',
-                'مطعم', 'طعام', 'وجبة', 'منيو', 'قائمة',
+                'مورد', 'موردين', 'بائع',
+                'منتجات', 'منتج', 'كتالوج', 'فهرس',
+                'طلب', 'طلبات', 'طلبية', 'شراء', 'مشتريات',
+                'مخزون', 'مخزن', 'سلسلة التوريد',
+                'توصيل', 'توريد', 'شحن', 'لوجستيات',
+                'سعر', 'أسعار', 'تسعير', 'جملة',
+                'منصة', 'سوق', 'ماركت بليس',
+                'مطاعم', 'مطعم',
+                'فودتك', 'كميات', 'توريدات',
                 'فرع', 'موقع', 'عنوان', 'فروع',
-                'توصيل', 'طلب', 'أوردر',
-                'ساندوتش', 'برجر', 'بطاطس', 'مشروب',
-                'سعر', 'أسعار', 'كم سعر',
-                'ساعات العمل', 'مواعيد', 'متى يفتح',
-                'حجز', 'reservation', 'طلبات', 'أكل',
-                'مأكولات', 'وجبات', 'عروض', 'خصم'
+                'عروض', 'خصم', 'أوردر'
             ],
             'en': [
-                'kaso', 'restaurant', 'food', 'meal', 'menu',
+                'kaso', 'supplier', 'suppliers', 'vendor', 'vendors',
+                'products', 'product', 'catalog', 'catalogue',
+                'order', 'ordering', 'orders', 'purchase', 'procurement',
+                'inventory', 'stock', 'supply chain',
+                'delivery', 'logistics', 'shipping',
+                'price', 'prices', 'pricing', 'cost', 'wholesale',
+                'platform', 'b2b', 'marketplace',
+                'restaurant', 'restaurants',
+                'foodtech', 'bulk', 'sourcing',
                 'branch', 'location', 'address', 'branches',
-                'delivery', 'order', 'ordering',
-                'sandwich', 'burger', 'fries', 'drink',
-                'price', 'prices', 'cost', 'how much',
-                'hours', 'opening', 'timing', 'schedule',
-                'reservation', 'book', 'booking',
-                'foodtech', 'cuisine', 'dish', 'dishes'
+                'how much', 'available'
             ]
         }
 
@@ -101,32 +107,156 @@ class IntentClassifier:
         self._kaso_embedding_centroid = None
 
     def _initialize_embeddings(self):
-        """Pre-compute representative Kaso embeddings for similarity check"""
+        """
+        Pre-compute representative Kaso embeddings for similarity check.
+
+        UPDATED: Now includes examples from 11 languages for full multilingual support (100+ languages).
+        """
         try:
             from app.services.embedding_service import embedding_service
             import numpy as np
 
-            # Create representative Kaso sentences (multilingual)
-            kaso_sentences = [
-                "أين يقع مطعم كاسو؟",
-                "ما هي قائمة طعام كاسو؟",
-                "كم سعر الساندوتش في كاسو؟",
-                "هل يوجد توصيل من كاسو؟",
-                "Where is Kaso restaurant located?",
-                "What is on the Kaso menu?",
-                "How much does a burger cost at Kaso?",
-                "Does Kaso deliver food?",
-                "What are Kaso's opening hours?",
-                "ما ساعات عمل كاسو؟"
+            # ===================================================================
+            # POSITIVE EXAMPLES: Kaso B2B Platform (11 languages, 33 examples)
+            # ===================================================================
+            kaso_b2b_platform_sentences = [
+                # Arabic (3 examples)
+                "من هم الموردون المتاحون على منصة كاسو؟",
+                "كيف أطلب منتجات من كاسو؟",
+                "ما هي أسعار المنتجات على كاسو؟",
+
+                # English (3 examples)
+                "Who are the suppliers on Kaso platform?",
+                "How do I place an order with Kaso?",
+                "What products are available on Kaso?",
+
+                # French (3 examples)
+                "Qui sont les fournisseurs sur la plateforme Kaso?",
+                "Comment passer une commande avec Kaso?",
+                "Quels produits sont disponibles sur Kaso?",
+
+                # German (3 examples)
+                "Wer sind die Lieferanten auf der Kaso-Plattform?",
+                "Wie kann ich eine Bestellung bei Kaso aufgeben?",
+                "Welche Produkte sind bei Kaso verfügbar?",
+
+                # Spanish (3 examples)
+                "¿Quiénes son los proveedores en la plataforma Kaso?",
+                "¿Cómo hago un pedido con Kaso?",
+                "¿Qué productos están disponibles en Kaso?",
+
+                # Chinese (3 examples)
+                "Kaso平台上有哪些供应商？",
+                "如何在Kaso下订单？",
+                "Kaso上有哪些产品？",
+
+                # Japanese (3 examples)
+                "Kasoプラットフォームのサプライヤーは誰ですか？",
+                "Kasoで注文するにはどうすればいいですか？",
+                "Kasoではどんな製品が利用できますか？",
+
+                # Korean (3 examples)
+                "Kaso 플랫폼에는 어떤 공급업체가 있나요?",
+                "Kaso에서 주문하려면 어떻게 해야 하나요?",
+                "Kaso에서 어떤 제품을 이용할 수 있나요?",
+
+                # Hindi (3 examples)
+                "Kaso प्लेटफॉर्म पर कौन से आपूर्तिकर्ता हैं?",
+                "मैं Kaso से उत्पाद कैसे ऑर्डर करूं?",
+                "Kaso पर कौन से उत्पाद उपलब्ध हैं?",
+
+                # Turkish (3 examples)
+                "Kaso platformunda hangi tedarikçiler var?",
+                "Kaso'dan nasıl sipariş veririm?",
+                "Kaso'da hangi ürünler mevcut?",
+
+                # Russian (3 examples)
+                "Какие поставщики есть на платформе Kaso?",
+                "Как разместить заказ через Kaso?",
+                "Какие продукты доступны на Kaso?",
             ]
 
-            # Embed all sentences
-            embeddings = embedding_service.embed_texts(kaso_sentences)
+            # ===================================================================
+            # NEGATIVE EXAMPLES: Other Kaso Companies (40 examples)
+            # Critical for company disambiguation!
+            # ===================================================================
+            non_restaurant_kaso_sentences = [
+                # Kaso Plastics (10 examples - multilingual)
+                "Does Kaso Plastics do injection molding?",
+                "Where is Kaso Plastics manufacturing facility in Vancouver?",
+                "ما هي خدمات Kaso Plastics في البلاستيك؟",
+                "Kaso Plastics contract manufacturing services",
+                "Kaso plastic injection company Canada",
+                "How much does Kaso Plastics charge for tooling?",
+                "Kaso Plastics Burlington factory address",
+                "Custom plastic molding by Kaso Plastics",
+                "Kaso Plastics OEM manufacturing capabilities",
+                "كم تكلفة قوالب البلاستيك من Kaso Plastics؟",
 
-            # Compute centroid (average)
-            self._kaso_embedding_centroid = np.mean(embeddings, axis=0)
+                # Kaso Security (10 examples - multilingual)
+                "How much does a Kaso safe cost?",
+                "Where to buy Kaso security vault in Helsinki?",
+                "ما هو سعر خزنة Kaso الآمنة؟",
+                "Kaso fireproof safe specifications Finland",
+                "Kaso Security Solutions products catalog",
+                "Are Kaso safes burglar resistant?",
+                "Kaso vault installation services",
+                "خزائن Kaso الفنلندية للحماية",
+                "Kaso safe dealer near me",
+                "Kaso Security fireproof rating",
 
-            logger.info("Intent classifier: Kaso embedding centroid initialized")
+                # Kaso Medical (10 examples - multilingual)
+                "Kaso Medical dental devices catalog",
+                "Kaso Medical Technology China contact information",
+                "أجهزة Kaso الطبية للأسنان في الصين",
+                "Kaso medical equipment OEM services",
+                "Kaso Medical Hong Kong address",
+                "Dental instruments by Kaso Medical",
+                "Kaso Medical Technology product line",
+                "معدات Kaso الطبية في هونغ كونغ",
+                "Kaso Medical distributor in Middle East",
+                "Kaso dental device specifications",
+
+                # Kaso Group (10 examples - multilingual)
+                "Kaso Group construction projects in Iraq",
+                "Kaso General Trading Baghdad office",
+                "مشاريع مجموعة Kaso في بغداد",
+                "Kaso Group oil services division",
+                "What companies are part of Kaso Group?",
+                "Kaso Group Iraq contracting services",
+                "مجموعة Kaso للتجارة العامة",
+                "Kaso Group real estate development",
+                "شركات مجموعة Kaso في العراق",
+                "Kaso Group business conglomerate Iraq",
+            ]
+
+            # Check if negative embeddings are enabled
+            from app.config import settings
+            use_negative_embeddings = getattr(settings, 'company_use_negative_embeddings', True)
+
+            # Embed positive examples (B2B platform)
+            positive_embeddings = embedding_service.embed_texts(kaso_b2b_platform_sentences)
+            self._kaso_b2b_platform_centroid = np.mean(positive_embeddings, axis=0)
+
+            if use_negative_embeddings:
+                # Embed negative examples (other Kaso companies)
+                negative_embeddings = embedding_service.embed_texts(non_restaurant_kaso_sentences)
+                self._non_restaurant_kaso_centroid = np.mean(negative_embeddings, axis=0)
+
+                logger.info(
+                    f"Intent classifier: Initialized with DUAL centroids - "
+                    f"{len(kaso_b2b_platform_sentences)} B2B platform examples + "
+                    f"{len(non_restaurant_kaso_sentences)} non-restaurant examples"
+                )
+            else:
+                # Fallback to single centroid (backward compatibility)
+                self._non_restaurant_kaso_centroid = None
+                self._kaso_embedding_centroid = self._kaso_b2b_platform_centroid  # For backward compatibility
+
+                logger.info(
+                    f"Intent classifier: Kaso B2B platform centroid initialized "
+                    f"from {len(kaso_b2b_platform_sentences)} examples in 11 languages"
+                )
 
         except Exception as e:
             logger.warning(f"Failed to initialize embeddings: {e}. Embedding similarity will be skipped.")
@@ -167,61 +297,92 @@ class IntentClassifier:
 
         # ============================================
         # STAGE 2: Keyword-based filtering (very fast)
+        # OPTIONAL: Disabled by default for full multilingual support
         # ============================================
-        kaso_score = self._keyword_score(query_lower, self.kaso_keywords)
-        off_topic_score = self._keyword_score(query_lower, self.off_topic_keywords)
+        try:
+            from app.config import settings
+            use_keywords = getattr(settings, 'intent_use_keywords', False)
+        except:
+            use_keywords = False  # Default: disabled for multilingual
 
-        # Strong signals from keywords
-        if kaso_score >= 2.0:  # Multiple Kaso keywords found
-            return (
-                IntentCategory.KASO_RELATED,
-                0.85,
-                f"Strong Kaso keyword signals (score: {kaso_score:.1f})"
-            )
+        if use_keywords:
+            kaso_score = self._keyword_score(query_lower, self.kaso_keywords)
+            off_topic_score = self._keyword_score(query_lower, self.off_topic_keywords)
 
-        if off_topic_score >= 2.0:  # Multiple off-topic keywords
-            return (
-                IntentCategory.OFF_TOPIC,
-                0.85,
-                f"Strong off-topic keyword signals (score: {off_topic_score:.1f})"
-            )
+            # Strong signals from keywords
+            if kaso_score >= 2.0:  # Multiple Kaso keywords found
+                return (
+                    IntentCategory.KASO_RELATED,
+                    0.85,
+                    f"Strong Kaso keyword signals (score: {kaso_score:.1f})"
+                )
+
+            if off_topic_score >= 2.0:  # Multiple off-topic keywords
+                return (
+                    IntentCategory.OFF_TOPIC,
+                    0.85,
+                    f"Strong off-topic keyword signals (score: {off_topic_score:.1f})"
+                )
 
         # ============================================
-        # STAGE 3: Embedding similarity check (medium speed)
+        # STAGE 3: Embedding similarity check with company disambiguation (medium speed)
+        # UPDATED: Now uses dual centroids for better company separation
         # ============================================
-        embedding_similarity = self._embedding_similarity(query)
+        embedding_similarity, interpretation = self._embedding_similarity(query)
 
-        if embedding_similarity is not None:
-            if embedding_similarity > 0.7:  # High similarity to Kaso domain
+        if interpretation is not None and interpretation != "legacy_mode":
+            # Using new dual centroid system
+            if interpretation == "strongly_restaurant":
+                return (
+                    IntentCategory.KASO_RELATED,
+                    0.85,
+                    "High similarity to Kaso restaurant (dual centroid analysis)"
+                )
+
+            elif interpretation == "strongly_non_restaurant":
+                return (
+                    IntentCategory.OFF_TOPIC,
+                    0.85,
+                    "High similarity to non-restaurant Kaso companies (dual centroid)"
+                )
+
+            # interpretation == "ambiguous" - proceed to LLM guard
+
+        elif interpretation == "legacy_mode" and embedding_similarity is not None:
+            # Fallback to single centroid logic (backward compatibility)
+            if embedding_similarity > 0.7:
                 return (
                     IntentCategory.KASO_RELATED,
                     embedding_similarity,
-                    f"High semantic similarity to Kaso domain ({embedding_similarity:.2f})"
+                    f"High semantic similarity to Kaso ({embedding_similarity:.2f})"
                 )
 
-            if embedding_similarity < 0.3:  # Very low similarity
+            if embedding_similarity < 0.3:
                 return (
                     IntentCategory.OFF_TOPIC,
                     0.80,
-                    f"Low semantic similarity to Kaso domain ({embedding_similarity:.2f})"
+                    f"Low semantic similarity to Kaso ({embedding_similarity:.2f})"
                 )
 
         # ============================================
-        # STAGE 4: LLM Guard for edge cases (slowest, most accurate)
+        # STAGE 4: LLM Guard for ambiguous cases (slowest, most accurate)
+        # UPDATED: Now called for ambiguous dual-centroid results
         # ============================================
-        if use_llm_guard and embedding_similarity is not None and 0.3 <= embedding_similarity <= 0.7:
+        if use_llm_guard and (interpretation == "ambiguous" or
+                             (embedding_similarity is not None and 0.3 <= embedding_similarity <= 0.7)):
             llm_category, llm_confidence, llm_reason = self._llm_classify(query)
             return llm_category, llm_confidence, f"LLM classification: {llm_reason}"
 
         # ============================================
-        # DEFAULT: If unclear, allow it (better UX than false negatives)
+        # DEFAULT: CHANGED - Reject unclear queries for safety
+        # CRITICAL CHANGE: Prevent confusion with other Kaso companies
         # ============================================
-        # Bias towards allowing queries rather than blocking them
-        # False negatives (allowing off-topic) are less harmful than false positives (blocking valid queries)
+        # NEW POLICY: If we're uncertain whether it's about the restaurant or another
+        # Kaso company, it's safer to reject and clarify than to accept and give wrong info
         return (
-            IntentCategory.KASO_RELATED,
+            IntentCategory.OFF_TOPIC,
             0.6,
-            "Borderline query - allowing to avoid false rejection"
+            "Ambiguous query - rejecting to avoid company confusion (may be about non-restaurant Kaso company)"
         )
 
     def _keyword_score(self, query: str, keyword_dict: Dict[str, List[str]]) -> float:
@@ -249,23 +410,31 @@ class IntentClassifier:
 
         return score
 
-    def _embedding_similarity(self, query: str) -> float:
+    def _embedding_similarity(self, query: str) -> Tuple[Optional[float], Optional[str]]:
         """
-        Calculate cosine similarity with Kaso domain centroid.
+        Calculate semantic similarity with dual centroids for company disambiguation.
+
+        UPDATED: Now uses TWO centroids:
+        - Restaurant centroid (positive examples)
+        - Non-restaurant Kaso companies centroid (negative examples)
+
+        Returns relative similarity score and interpretation.
 
         Args:
             query: User query
 
         Returns:
-            Cosine similarity score (0-1), or None if embeddings unavailable
+            Tuple of (similarity_score, interpretation)
+            - similarity_score: 0-1 (higher = more restaurant-like)
+            - interpretation: 'strongly_restaurant', 'strongly_non_restaurant', 'ambiguous', or None
         """
         try:
             # Lazy initialization of embeddings
-            if self._kaso_embedding_centroid is None:
+            if not hasattr(self, '_kaso_b2b_platform_centroid') or self._kaso_b2b_platform_centroid is None:
                 self._initialize_embeddings()
 
-            if self._kaso_embedding_centroid is None:
-                return None  # Embeddings not available
+            if not hasattr(self, '_kaso_b2b_platform_centroid') or self._kaso_b2b_platform_centroid is None:
+                return (None, None)  # Embeddings not available
 
             from app.services.embedding_service import embedding_service
             import numpy as np
@@ -273,18 +442,45 @@ class IntentClassifier:
             # Embed the query
             query_embedding = embedding_service.embed_text(query)
 
-            # Cosine similarity
-            dot_product = np.dot(query_embedding, self._kaso_embedding_centroid)
-            norm_a = np.linalg.norm(query_embedding)
-            norm_b = np.linalg.norm(self._kaso_embedding_centroid)
+            # Cosine similarity to B2B platform centroid
+            dot_b2b_platform = np.dot(query_embedding, self._kaso_b2b_platform_centroid)
+            norm_query = np.linalg.norm(query_embedding)
+            norm_b2b_platform = np.linalg.norm(self._kaso_b2b_platform_centroid)
+            similarity_b2b_platform = dot_b2b_platform / (norm_query * norm_b2b_platform)
 
-            similarity = dot_product / (norm_a * norm_b)
+            # If negative embeddings are enabled, use dual centroid approach
+            if hasattr(self, '_non_restaurant_kaso_centroid') and self._non_restaurant_kaso_centroid is not None:
+                # Cosine similarity to non-restaurant centroid
+                dot_non_restaurant = np.dot(query_embedding, self._non_restaurant_kaso_centroid)
+                norm_non_restaurant = np.linalg.norm(self._non_restaurant_kaso_centroid)
+                similarity_non_restaurant = dot_non_restaurant / (norm_query * norm_non_restaurant)
 
-            return float(similarity)
+                # Relative score: positive = B2B platform, negative = non-B2B-platform
+                # This creates better separation than absolute similarity
+                relative_score = similarity_b2b_platform - similarity_non_restaurant
+
+                logger.debug(
+                    f"Embedding similarity: B2B_platform={similarity_b2b_platform:.3f}, "
+                    f"non-restaurant={similarity_non_restaurant:.3f}, "
+                    f"relative={relative_score:.3f}"
+                )
+
+                # Interpret the relative score
+                if relative_score > 0.2:  # Clearly more B2B platform-like
+                    return (0.85, "strongly_b2b_platform")
+                elif relative_score < -0.2:  # Clearly more non-B2B-platform
+                    return (0.15, "strongly_non_b2b_platform")
+                else:  # Ambiguous - needs LLM guard
+                    return (0.5, "ambiguous")
+
+            else:
+                # Fallback to single centroid (backward compatibility)
+                logger.debug(f"Single centroid similarity: {similarity_b2b_platform:.3f}")
+                return (float(similarity_b2b_platform), "legacy_mode")
 
         except Exception as e:
             logger.warning(f"Embedding similarity calculation failed: {e}")
-            return None
+            return (None, None)
 
     def _llm_classify(self, query: str) -> Tuple[IntentCategory, float, str]:
         """
@@ -300,60 +496,79 @@ class IntentClassifier:
         try:
             from app.services.llm_service import llm_service
 
-            classification_prompt = f"""You are an intent classifier for Kaso restaurant chatbot.
+            # UPDATED: Enhanced prompt with explicit company disambiguation
+            classification_prompt = f"""You are an intent classifier for Kaso B2B PLATFORM chatbot.
 
-Your ONLY task: Determine if this query is related to Kaso restaurant or not.
+CRITICAL: There are MULTIPLE companies worldwide named "Kaso". You MUST distinguish between them.
 
-Kaso is a restaurant/foodtech company. Queries about Kaso include:
-- Menu items, prices, ingredients, food quality
-- Branch locations, addresses, how to get there
-- Hours, opening times, closing times
-- Ordering, delivery, reservations, bookings
-- General restaurant info, history, services, contact info
-- Restaurant recommendations, reviews (if about Kaso)
+✅ KASO B2B PLATFORM (what we support):
+- Kaso - B2B supply chain platform connecting suppliers with restaurants
+- Locations: UAE and Saudi Arabia
+- Founded: 2021
+- Topics: suppliers, products, orders, inventory, pricing, procurement, supply chain management, platform features
 
-OFF-TOPIC queries (NOT related to Kaso):
-- Other companies named "Kaso" (Kaso Plastics, Kaso Security, Kaso Medical, etc.)
-- General knowledge questions (weather, sports, politics, tech, science)
-- Programming, coding, technical help
-- News, current events
-- Entertainment (movies, music, games)
-- Anything else NOT about Kaso restaurant
+❌ OTHER KASO COMPANIES (NOT supported - MUST classify as OFFTOPIC):
+1. Kaso Plastics - American plastics manufacturing (Vancouver, Canada, injection molding)
+2. Kaso Security Solutions - Finnish security company (Helsinki, Finland, safes/vaults)
+3. Kaso Medical Technology - Chinese medical devices (Hong Kong, dental equipment)
+4. Kaso Group - Iraqi business conglomerate (Baghdad, Iraq, construction/oil)
+
+❌ GENERAL OFF-TOPIC (also OFFTOPIC):
+- Weather, politics, sports, entertainment, tech, programming, science, news
 
 Query to classify: "{query}"
 
 Respond with EXACTLY ONE WORD:
-- KASO if the query is about Kaso restaurant
-- OFFTOPIC if the query is NOT about Kaso restaurant
-- UNCLEAR if you're uncertain
+- KASO_B2B_PLATFORM - if asking about the B2B supply chain platform
+- KASO_PLASTICS - if asking about the plastics company
+- KASO_SECURITY - if asking about security/safes
+- KASO_MEDICAL - if asking about medical devices
+- KASO_GROUP - if asking about the Iraqi conglomerate
+- OTHER_KASO - if asking about a different Kaso company
+- OFFTOPIC - if not about any Kaso company at all
+- UNCLEAR - if genuinely uncertain
 
 Your one-word answer:"""
 
             messages = [{"role": "user", "content": classification_prompt}]
             response = llm_service.generate(
                 messages=messages,
-                system_prompt="You are a precise intent classifier. Answer with one word only: KASO, OFFTOPIC, or UNCLEAR."
+                system_prompt="You are a precise intent classifier. Answer with ONE word only."
             )
 
             response_clean = response.strip().upper()
 
-            if "KASO" in response_clean:
+            # Check for KASO B2B PLATFORM first (what we support)
+            if "KASO_B2B_PLATFORM" in response_clean or "KASO_RESTAURANT" in response_clean:
                 return (
                     IntentCategory.KASO_RELATED,
-                    0.90,
-                    "LLM classified as Kaso-related"
+                    0.95,
+                    "LLM: Kaso restaurant"
                 )
+            # Check for OTHER Kaso companies (NOT supported - must reject)
+            elif any(x in response_clean for x in [
+                "KASO_PLASTICS", "KASO_SECURITY", "KASO_MEDICAL",
+                "KASO_GROUP", "OTHER_KASO"
+            ]):
+                detected = response_clean.strip()
+                return (
+                    IntentCategory.OFF_TOPIC,
+                    0.95,
+                    f"LLM: Other Kaso company - {detected}"
+                )
+            # Check for general off-topic
             elif "OFFTOPIC" in response_clean or "OFF" in response_clean:
                 return (
                     IntentCategory.OFF_TOPIC,
                     0.90,
-                    "LLM classified as off-topic"
+                    "LLM: Completely off-topic"
                 )
+            # Uncertain
             else:
                 return (
                     IntentCategory.UNCLEAR,
                     0.5,
-                    "LLM uncertain about classification"
+                    "LLM: Uncertain"
                 )
 
         except Exception as e:
