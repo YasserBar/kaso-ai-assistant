@@ -45,7 +45,8 @@ async def lifespan(app: FastAPI):
     Application lifespan handler.
 
     Responsibilities:
-    - On startup: initialize the database, load the embedding model, and initialize the ChromaDB vector store.
+    - On startup: initialize the database, and initialize the ChromaDB vector store.
+      Note: Embedding model will be loaded lazily on first use to avoid startup network issues.
     - On shutdown: perform cleanup (currently logs a shutdown message).
 
     Notes:
@@ -59,10 +60,8 @@ async def lifespan(app: FastAPI):
     await init_db()
     logger.info("✅ Database initialized")
     
-    # Load embedding model (this may take a moment first time)
-    logger.info("📥 Loading embedding model...")
-    embedding_service.initialize()
-    logger.info(f"✅ Embedding model loaded: {settings.embedding_model}")
+    # Defer embedding model loading to first actual use to prevent startup failures when offline
+    logger.info("⏳ Embedding model will be loaded on first use (lazy initialization)")
     
     # Initialize ChromaDB
     logger.info("📥 Initializing ChromaDB...")
