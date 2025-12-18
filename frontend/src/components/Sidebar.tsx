@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
     MessageSquare,
     Plus,
@@ -49,34 +49,88 @@ export default function Sidebar({
     const [isMobileOpen, setIsMobileOpen] = useState(false);
     const [mounted, setMounted] = useState(false);
 
+    // Pagination state
+    const pageRef = useRef(1);
+    const [pageSize, setPageSize] = useState(20);
+    const [total, setTotal] = useState(0);
+    
+    // Infinite scroll refs & state
+    const listContainerRef = useRef<HTMLDivElement | null>(null);
+    const sentinelRef = useRef<HTMLDivElement | null>(null);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+    // Helper to merge arrays uniquely by id
+    const mergeUniqueById = (prev: ConversationSummary[], next: ConversationSummary[]) => {
+        const map = new Map<string, ConversationSummary>();
+        for (const c of prev) map.set(c.id, c);
+        for (const c of next) map.set(c.id, c);
+        return Array.from(map.values());
+    };
+
     // Initial mount effect
     useEffect(() => {
         setMounted(true);
     }, []);
 
     // Load conversations
-    const loadConversations = useCallback(async () => {
+    const loadConversations = useCallback(async (targetPage: number, append: boolean = false) => {
         try {
-            setIsLoading(true);
-            const data = await fetchConversations();
-            setConversations(data.conversations);
+            if (append) {
+                setIsLoadingMore(true);
+            } else {
+                setIsLoading(true);
+            }
+            const data = await fetchConversations(targetPage, pageSize);
+            setTotal(data.total);
+            pageRef.current = data.page;
+            // Support both camelCase and snake_case from API
+            setPageSize((data as any).pageSize ?? (data as any).page_size ?? pageSize);
+            setConversations(prev => append ? mergeUniqueById(prev, data.conversations) : data.conversations);
         } catch (error) {
             console.error('Failed to load conversations:', error);
         } finally {
-            setIsLoading(false);
+            if (append) {
+                setIsLoadingMore(false);
+            } else {
+                setIsLoading(false);
+            }
         }
-    }, []);
+    }, [pageSize]);
 
     useEffect(() => {
-        loadConversations();
+        pageRef.current = 1;
+        loadConversations(1, false);
     }, [loadConversations, refreshTrigger]);
+
+    // Infinite Scroll: observe the sentinel at the end of the list
+    useEffect(() => {
+        if (searchQuery) return; // disable infinite scroll during search
+        const rootEl = listContainerRef.current;
+        const sentinelEl = sentinelRef.current;
+        if (!rootEl || !sentinelEl) return;
+
+        const observer = new IntersectionObserver((entries) => {
+            const entry = entries[0];
+            if (entry.isIntersecting) {
+                const totalPages = Math.ceil(total / pageSize);
+                if (pageRef.current < totalPages && !isLoadingMore) {
+                    loadConversations(pageRef.current + 1, true);
+                }
+            }
+        }, { root: rootEl, rootMargin: '0px', threshold: 0.1 });
+
+        observer.observe(sentinelEl);
+        return () => observer.disconnect();
+    }, [searchQuery, total, pageSize, isLoadingMore, loadConversations]);
 
     // Search conversations
     const handleSearch = async (query: string) => {
         setSearchQuery(query);
 
         if (!query.trim()) {
-            loadConversations();
+            // Reset to first page when clearing search
+            pageRef.current = 1;
+            await loadConversations(1, false);
             return;
         }
 
@@ -98,6 +152,7 @@ export default function Sidebar({
                 }
             });
             setConversations(Array.from(uniqueConvs.values()));
+            // When searching, pagination is hidden and not used
         } catch (error) {
             console.error('Search failed:', error);
         } finally {
@@ -190,7 +245,7 @@ export default function Sidebar({
                         <button
                             onClick={() => {
                                 setSearchQuery('');
-                                loadConversations();
+                                loadConversations(1, false);
                             }}
                             className="absolute end-3 top-1/2 -translate-y-1/2"
                         >
@@ -201,15 +256,15 @@ export default function Sidebar({
             </div>
 
             {/* Conversations List */}
-            <div className="flex-1 overflow-y-auto p-2">
+            <div className="flex-1 overflow-y-auto p-2" ref={listContainerRef}>
                 {isLoading ? (
                     <div className="flex items-center justify-center py-8">
                         <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full" />
                     </div>
                 ) : conversations.length === 0 ? (
                     <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                        <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                        <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                         <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                         <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
                         <p className="text-sm">{t('no_conversations')}</p>
                         <p className="text-xs mt-1">{t('start_new_chat')}</p>
                     </div>
@@ -256,9 +311,20 @@ export default function Sidebar({
                                 </div>
                             </div>
                         ))}
+                        {isLoadingMore && (
+                            <div className="flex items-center justify-center py-3">
+                                <div className="animate-spin w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full" />
+                            </div>
+                        )}
+                        <div ref={sentinelRef} className="h-1" />
                     </div>
                 )}
+
+                {/* Infinite Scroll Sentinel replaces Pagination Controls */}
+                {/* Removed Prev/Next buttons in favor of auto-loading on scroll */}
             </div>
+
+
 
             {/* Settings Footer */}
             <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-3">

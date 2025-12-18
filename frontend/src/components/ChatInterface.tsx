@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Loader2, Bot, User } from 'lucide-react';
-import { streamChat } from '@/lib/api';
+import { streamChat, fetchConversation } from '@/lib/api';
 import type { ChatMessage } from '@/lib/types';
 import { useLanguage } from '@/lib/LanguageContext';
 
@@ -57,10 +57,17 @@ export default function ChatInterface({
             setStreamingContent('');
         }
 
-        // If switching between two existing conversations (not from null), and not currently streaming, reset local messages
-        if (!isLoading && prev !== null && curr !== null && prev !== curr) {
-            setMessages([]);
+        // Load history whenever switching to a specific conversation id (including from null), and not currently streaming
+        if (!isLoading && curr !== null && prev !== curr) {
             setStreamingContent('');
+            (async () => {
+                try {
+                    const data = await fetchConversation(curr);
+                    setMessages(data.messages);
+                } catch (error) {
+                    console.error('Failed to load conversation history:', error);
+                }
+            })();
         }
 
         // Update previous id tracker
