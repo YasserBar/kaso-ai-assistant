@@ -26,11 +26,12 @@ REM Create .env.local if not exists
 echo [2/3] Setting up environment...
 if not exist ".env.local" (
     echo NEXT_PUBLIC_API_URL=/api > .env.local
-    echo NEXT_PUBLIC_API_KEY=change-me-in-production >> .env.local
+    echo BACKEND_URL=http://backend:8000/api >> .env.local
+    echo API_SECRET_KEY=change-me-in-production >> .env.local
     echo       Created .env.local file.
     echo.
     echo [IMPORTANT] Please edit .env.local:
-    echo   - NEXT_PUBLIC_API_KEY: Must match backend API_SECRET_KEY
+    echo   - API_SECRET_KEY: Must match backend API_SECRET_KEY
     echo.
 ) else (
     echo       .env.local file already exists.

@@ -25,11 +25,13 @@ echo "      Dependencies installed."
 echo "[2/3] Setting up environment..."
 if [ ! -f ".env.local" ]; then
     echo "NEXT_PUBLIC_API_URL=/api" > .env.local
-    echo "NEXT_PUBLIC_API_KEY=change-me-in-production" >> .env.local
     echo "      Created .env.local file."
     echo ""
     echo "[IMPORTANT] Please edit .env.local:"
-    echo "  - NEXT_PUBLIC_API_KEY: Must match backend API_SECRET_KEY"
+    echo "  - NEXT_PUBLIC_API_URL: Proxy base path (default: /api). Requests are forwarded via Next.js route handler to the internal backend service."
+    echo "  - API_SECRET_KEY: API key for authentication (must match backend API_SECRET_KEY)."
+    echo "  - BACKEND_URL: Backend service URL (e.g., http://localhost:8000/api)."
+    echo "  - CORS_ORIGINS: Must include the frontend domain (e.g., http://localhost:3000)."
     echo ""
 else
     echo "      .env.local file already exists."
