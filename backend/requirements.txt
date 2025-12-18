@@ -28,6 +28,7 @@ pydantic>=2.5.0
 pydantic-settings>=2.1.0
 httpx>=0.26.0
 tqdm>=4.66.0
+tiktoken>=0.5.0
 
 # Web Scraping (optional but recommended for better results)
 selenium>=4.15.0
