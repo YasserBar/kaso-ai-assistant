@@ -59,11 +59,31 @@ class EmbeddingService:
 
                 logger.info(f"⏳ Loading embedding model: {settings.embedding_model} (cache: {cache_dir})")
 
-                # Initialize model with persistent cache
-                self._model = SentenceTransformer(
-                    settings.embedding_model,
-                    cache_folder=cache_dir
-                )
+                # Check if model exists locally first
+                model_path = os.path.join(cache_dir, f"sentence-transformers_{settings.embedding_model.replace('/', '_')}")
+                local_files_only = os.path.exists(model_path)
+
+                if local_files_only:
+                    logger.info(f"📦 Found cached model, loading offline: {model_path}")
+
+                # Try loading with local_files_only first if cached, then fallback to online
+                try:
+                    self._model = SentenceTransformer(
+                        settings.embedding_model,
+                        cache_folder=cache_dir,
+                        local_files_only=local_files_only
+                    )
+                except Exception as offline_error:
+                    if local_files_only:
+                        logger.warning(f"⚠️ Offline load failed, trying online: {offline_error}")
+                        self._model = SentenceTransformer(
+                            settings.embedding_model,
+                            cache_folder=cache_dir,
+                            local_files_only=False
+                        )
+                    else:
+                        raise
+
                 logger.info(f"✅ Embedding model loaded: {settings.embedding_model}")
             except Exception as e:
                 logger.error(f"❌ Failed to load embedding model '{settings.embedding_model}': {e}")
