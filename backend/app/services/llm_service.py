@@ -62,9 +62,16 @@ class LLMService:
         # UPDATED: Removed hardcoded ar/en branching, now uses multilingual_service
         if language == "auto":
             # Auto mode: mirror the user's input language
-            lang_instruction = "Respond in the SAME LANGUAGE as the user's question. Match their language exactly."
-            # For auto mode, provide bilingual example (Arabic + English)
-            refuse_message = multilingual_service.generate_refusal_message("ar") + " / " + multilingual_service.generate_refusal_message("en")
+            # CRITICAL: The LLM must detect the user's language and respond in that SAME language
+            lang_instruction = """CRITICAL: You MUST detect the language of the user's message and respond ONLY in that SAME language.
+   - Analyze the user's input to determine their language
+   - Respond 100% in that detected language - NO mixing languages
+   - If user writes in English → respond ONLY in English
+   - If user writes in Arabic → respond ONLY in Arabic
+   - If user writes in French → respond ONLY in French
+   - And so on for ANY language"""
+            # Use English refusal as template - LLM will translate it to user's language
+            refuse_message = multilingual_service.generate_refusal_message("en")
         else:
             # Explicit language: use multilingual service to generate language-specific instruction
             lang_instruction = multilingual_service.generate_system_prompt_instruction(language)
