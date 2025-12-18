@@ -43,33 +43,59 @@ class IntentClassifier:
         """Initialize the intent classifier with keyword lists and patterns"""
 
         # Kaso-specific keywords (Arabic + English)
+        # UPDATED: Added company info keywords (funding, founders, etc.)
         self.kaso_keywords = {
             'ar': [
+                # Brand name
                 'كاسو', 'كازو', 'kaso',
+                # Suppliers & products
                 'مورد', 'موردين', 'بائع',
                 'منتجات', 'منتج', 'كتالوج', 'فهرس',
+                # Orders & purchasing
                 'طلب', 'طلبات', 'طلبية', 'شراء', 'مشتريات',
+                # Inventory & logistics
                 'مخزون', 'مخزن', 'سلسلة التوريد',
                 'توصيل', 'توريد', 'شحن', 'لوجستيات',
+                # Pricing
                 'سعر', 'أسعار', 'تسعير', 'جملة',
+                # Platform
                 'منصة', 'سوق', 'ماركت بليس',
+                # Restaurants
                 'مطاعم', 'مطعم',
+                # General
                 'فودتك', 'كميات', 'توريدات',
                 'فرع', 'موقع', 'عنوان', 'فروع',
-                'عروض', 'خصم', 'أوردر'
+                'عروض', 'خصم', 'أوردر',
+                # Company info (NEW)
+                'تمويل', 'استثمار', 'مستثمر', 'مستثمرين',
+                'مؤسس', 'مؤسسين', 'فريق', 'تاريخ',
+                'شركة', 'شراكة', 'عملاء'
             ],
             'en': [
-                'kaso', 'supplier', 'suppliers', 'vendor', 'vendors',
+                # Brand name
+                'kaso',
+                # Suppliers & products
+                'supplier', 'suppliers', 'vendor', 'vendors',
                 'products', 'product', 'catalog', 'catalogue',
+                # Orders & purchasing
                 'order', 'ordering', 'orders', 'purchase', 'procurement',
+                # Inventory & logistics
                 'inventory', 'stock', 'supply chain',
                 'delivery', 'logistics', 'shipping',
+                # Pricing
                 'price', 'prices', 'pricing', 'cost', 'wholesale',
+                # Platform
                 'platform', 'b2b', 'marketplace',
+                # Restaurants
                 'restaurant', 'restaurants',
+                # General
                 'foodtech', 'bulk', 'sourcing',
                 'branch', 'location', 'address', 'branches',
-                'how much', 'available'
+                'how much', 'available',
+                # Company info (NEW)
+                'funding', 'funded', 'raised', 'investment', 'investor', 'investors',
+                'founder', 'founders', 'founded', 'team', 'history',
+                'company', 'partnership', 'customers'
             ]
         }
 
@@ -289,6 +315,42 @@ class IntentClassifier:
             return IntentCategory.UNCLEAR, 0.5, "Query too short to classify"
 
         # ============================================
+        # STAGE 0.5: "KASO" MENTIONED → ALLOW (MULTILINGUAL FIX)
+        # ============================================
+        # "Kaso" is a brand name that can be written in different scripts.
+        # If user mentions "Kaso" in ANY script, they're asking about Kaso.
+        # The system prompt will handle disambiguation between different Kaso companies.
+        kaso_variants = [
+            # Latin script (most common - used by most languages)
+            'kaso',
+            # Arabic script
+            'كاسو', 'كازو',
+            # Cyrillic (Russian, Ukrainian, etc.)
+            'касо',
+            # Japanese (Katakana - most common for foreign brands)
+            'カソ',
+            # Chinese (phonetic transliteration)
+            '卡索', '卡苏',
+            # Korean (Hangul)
+            '카소',
+            # Hindi/Devanagari
+            'कासो',
+            # Greek
+            'κάσο', 'κασο',
+            # Thai
+            'คาโซ',
+            # Hebrew
+            'קאסו',
+        ]
+
+        if any(variant in query_lower or variant in query for variant in kaso_variants):
+            return (
+                IntentCategory.KASO_RELATED,
+                0.90,
+                "Query mentions 'Kaso' brand name - allowing for all languages"
+            )
+
+        # ============================================
         # STAGE 1: Greeting detection (fast path)
         # ============================================
         for pattern in self.greeting_patterns:
@@ -505,7 +567,11 @@ CRITICAL: There are MULTIPLE companies worldwide named "Kaso". You MUST distingu
 - Kaso - B2B supply chain platform connecting suppliers with restaurants
 - Locations: UAE and Saudi Arabia
 - Founded: 2021
-- Topics: suppliers, products, orders, inventory, pricing, procurement, supply chain management, platform features
+- Topics ALLOWED (classify as KASO_B2B_PLATFORM):
+  * Platform features: suppliers, products, orders, inventory, pricing, procurement, supply chain
+  * Company info: funding, investors, founders, team, history, locations, branches, offices
+  * Business questions: how to use, pricing, partnerships, customers, restaurants
+  * Any question that mentions "Kaso" in context of food/restaurant/B2B platform
 
 ❌ OTHER KASO COMPANIES (NOT supported - MUST classify as OFFTOPIC):
 1. Kaso Plastics - American plastics manufacturing (Vancouver, Canada, injection molding)

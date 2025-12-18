@@ -94,36 +94,70 @@ class MultilingualService:
 
     def detect_language(self, text: str) -> str:
         """
-        Detect language of the given text.
+        Detect language of the given text with enhanced short text handling.
 
-        Uses langdetect library for automatic detection.
-        Falls back to 'en' if detection fails.
+        Uses langdetect library for automatic detection, but falls back to 'auto'
+        for short texts where detection is unreliable.
+
+        IMPORTANT: For short texts (< 4 words or < 15 chars), returns 'auto'
+        to let the LLM mirror the user's language naturally.
 
         Args:
             text: Text to detect language from
 
         Returns:
-            ISO 639-1 language code (e.g., 'ar', 'en', 'fr')
+            ISO 639-1 language code (e.g., 'ar', 'en', 'fr') or 'auto'
         """
         try:
             # Import langdetect here to handle cases where it's not installed
-            from langdetect import detect, LangDetectException
+            from langdetect import detect_langs, LangDetectException
 
             # Clean text
             text_clean = text.strip()
 
             if not text_clean:
-                return 'en'  # Default fallback
+                return 'auto'  # Empty text → let LLM decide
 
-            # Detect language
-            detected = detect(text_clean)
+            # ════════════════════════════════════════
+            # SHORT TEXT HANDLING (CRITICAL FIX)
+            # langdetect is unreliable for short texts
+            # ════════════════════════════════════════
 
-            logger.debug(f"Detected language: {detected} for text: {text_clean[:50]}...")
-            return detected
+            # Check 1: Very short text (< 15 characters)
+            if len(text_clean) < 15:
+                logger.debug(f"Text too short ({len(text_clean)} chars), using 'auto'")
+                return 'auto'
+
+            # Check 2: Too few words (< 4 words)
+            word_count = len(text_clean.split())
+            if word_count < 4:
+                logger.debug(f"Too few words ({word_count}), using 'auto'")
+                return 'auto'
+
+            # ════════════════════════════════════════
+            # CONFIDENCE-BASED DETECTION
+            # Only trust high-confidence detections
+            # ════════════════════════════════════════
+
+            detections = detect_langs(text_clean)
+
+            if detections and detections[0].prob > 0.8:
+                detected = detections[0].lang
+                logger.debug(
+                    f"Detected language: {detected} (confidence: {detections[0].prob:.2f}) "
+                    f"for text: {text_clean[:50]}..."
+                )
+                return detected
+            else:
+                # Low confidence → let LLM mirror user's language
+                logger.debug(
+                    f"Low confidence detection ({detections[0].prob:.2f if detections else 0}), using 'auto'"
+                )
+                return 'auto'
 
         except (ImportError, Exception) as e:
-            logger.warning(f"Language detection failed: {e}. Falling back to 'en'")
-            return 'en'
+            logger.warning(f"Language detection failed: {e}. Using 'auto'")
+            return 'auto'
 
     def generate_refusal_message(
         self,
@@ -179,39 +213,48 @@ class MultilingualService:
         Generate refusal message using LLM.
 
         Args:
-            language: ISO 639-1 language code
+            language: ISO 639-1 language code or 'auto'
             context: Context type ('restaurant' or 'general')
 
         Returns:
             Generated refusal message
         """
+        # ════════════════════════════════════════
+        # HANDLE 'auto' LANGUAGE (CRITICAL FIX)
+        # When language is 'auto', use English as safe fallback
+        # The LLM in the main chat will mirror user's language anyway
+        # ════════════════════════════════════════
+        if language == 'auto':
+            logger.debug("Language is 'auto', using English refusal as fallback")
+            return self.REFUSAL_MESSAGES['en']
+
         try:
             # Import LLM service here to avoid circular imports
             from app.services.llm_service import llm_service
 
-            # Build prompt for LLM
-            prompt = f"""
-Generate a polite refusal message in the language code '{language}' for the following scenario:
+            # Build prompt for LLM with STRONGER language enforcement
+            prompt = f"""CRITICAL INSTRUCTION: Generate a refusal message ENTIRELY in language code '{language}'.
 
-Scenario: A user asks a question that is NOT about Kaso B2B platform (a supply chain platform for restaurants and suppliers).
+SCENARIO: A user asks a question that is NOT about Kaso B2B platform (a supply chain platform for restaurants and suppliers).
 
-The refusal message should:
-1. Apologize politely
-2. Explain that you are a specialized assistant ONLY for Kaso B2B supply chain platform
-3. State that you cannot answer questions outside Kaso's scope
-4. Be concise (1-2 sentences)
-5. Be written ENTIRELY in the target language (code: {language})
+REQUIREMENTS:
+1. The message MUST be written 100% in {language} language - NO OTHER LANGUAGE
+2. Apologize politely
+3. Explain you are a specialized assistant ONLY for Kaso B2B supply chain platform
+4. State you cannot answer questions outside Kaso's scope
+5. Keep it concise (1-2 sentences maximum)
 
-Example templates:
+EXAMPLES (for reference only - generate in {language}):
 - English: "Sorry, I'm a specialized assistant for Kaso B2B supply chain platform only. I cannot answer questions outside Kaso's scope."
 - Arabic: "عذراً، أنا مساعد خاص بمنصة كاسو B2B فقط. لا يمكنني الإجابة على أسئلة خارج نطاق كاسو."
 
-Now generate the message in language code '{language}':
-"""
+IMPORTANT: Your response must be ONLY the refusal message in {language}. Do NOT include any other language or explanation.
+
+Your refusal message in {language}:"""
 
             # Generate using sync LLM client
             messages = [{"role": "user", "content": prompt}]
-            system_prompt = "You are a helpful assistant that generates localized messages."
+            system_prompt = f"You are a translator. Generate messages ONLY in the requested language ({language}). Never use any other language."
 
             response = llm_service.generate(messages, system_prompt)
 

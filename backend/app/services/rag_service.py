@@ -6,11 +6,11 @@ Combines retrieval, reranking, and generation
 """
 
 from typing import List, Dict, Any, Tuple
-from langdetect import detect, LangDetectException
 
 from app.config import settings
 from app.services.chroma_service import chroma_service
 from app.services.reranker_service import reranker_service
+from app.services.multilingual_service import multilingual_service
 
 
 class RAGService:
@@ -20,19 +20,18 @@ class RAGService:
     
     def detect_language(self, text: str) -> str:
         """
-        Detect the language of input text
-        
+        Detect the language of input text using multilingual service.
+
+        Uses the enhanced multilingual_service which handles short texts properly
+        and returns 'auto' for unreliable detections.
+
         Args:
             text: Input text
-            
+
         Returns:
-            Language code ('ar' for Arabic, 'en' for English, etc.)
+            Language code ('ar', 'en', 'fr', etc.) or 'auto' for short/ambiguous texts
         """
-        try:
-            lang = detect(text)
-            return lang
-        except LangDetectException:
-            return "en"  # Default to English
+        return multilingual_service.detect_language(text)
     
     def retrieve(
         self,
