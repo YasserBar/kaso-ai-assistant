@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   backend:
     build:
@@ -7,20 +6,17 @@ services:
     env_file:
       - .env
     environment:
-      # Allow override via root .env
       API_SECRET_KEY: ${API_SECRET_KEY}
       CORS_ORIGINS: ${CORS_ORIGINS}
       GROQ_API_KEY: ${GROQ_API_KEY}
+      HF_HUB_DOWNLOAD_TIMEOUT: "300"
+      HF_HUB_ETAG_TIMEOUT: "300"
     volumes:
       - backend_data:/app/data
-    # NOTE: If the backend is only consumed by other containers,
-    # you don't need to expose a host port. The frontend can
-    # reach the backend via the internal Docker network at
-    # http://backend:8000. To keep the backend internal-only,
-    # remove or comment out the 'ports' section below.
-    # ports:
-    #   - "8000:8000"
+    # Keep backend internal-only; frontend will access via internal DNS http://backend:8000
     restart: unless-stopped
+    networks:
+      - app_net
 
   frontend:
     build:
@@ -28,7 +24,6 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
-        NEXT_PUBLIC_API_KEY: ${NEXT_PUBLIC_API_KEY}
         BACKEND_URL: ${BACKEND_URL}
     env_file:
       - .env
@@ -36,13 +31,19 @@ services:
       - NODE_ENV=${NODE_ENV}
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
       - BACKEND_URL=${BACKEND_URL}
-      - NEXT_PUBLIC_API_KEY=${NEXT_PUBLIC_API_KEY}
       - API_SECRET_KEY=${API_SECRET_KEY}
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
-      - "3000:3000"
+      - "${FRONTEND_HOST_PORT:-3000}:3000"
     restart: unless-stopped
+    networks:
+      - app_net
 
 volumes:
   backend_data:
+
+networks:
+  app_net:
+    driver: bridge
