@@ -5,8 +5,7 @@
 // Backend API base (proxy root)
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
-// API Key is no longer sent from the browser; the server proxy adds it.
-export const API_KEY = process.env.NEXT_PUBLIC_API_KEY || '';
+// API Key is no longer sent from the browser; the server proxy adds it via API_SECRET_KEY
 
 /**
  * Default headers for API requests (client-side)

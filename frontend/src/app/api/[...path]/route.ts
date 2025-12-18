@@ -3,8 +3,8 @@ import { NextRequest } from 'next/server';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const BACKEND_BASE = process.env.BACKEND_URL ?? 'http://localhost:8000/api';
-const API_SECRET = process.env.API_SECRET_KEY ?? process.env.NEXT_PUBLIC_API_KEY ?? '';
+const BACKEND_BASE = process.env.BACKEND_URL ?? '';
+const API_SECRET = process.env.API_SECRET_KEY ?? '';
 
 async function forward(req: NextRequest, pathname: string) {
   const url = `${BACKEND_BASE}/${pathname}${req.nextUrl.search}`;
