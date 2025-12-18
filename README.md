@@ -118,9 +118,10 @@ npm install
 
 # Copy and edit environment file
 # Create .env.local with:
-# NEXT_PUBLIC_API_URL=http://localhost:8000
-# NEXT_PUBLIC_API_KEY=your_secret_key
-
+# NEXT_PUBLIC_API_URL=/api
+# API_SECRET_KEY=change-me-in-production
+# BACKEND_URL=http://localhost:8000/api
+# CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 # Start development server
 npm run dev
 ```

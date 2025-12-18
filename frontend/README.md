@@ -29,7 +29,6 @@ npm install
 # Create environment file
 # Copy env.example.txt to .env.local and edit:
 # NEXT_PUBLIC_API_URL=/api
-# NEXT_PUBLIC_API_KEY=your_secret_api_key_here
 
 # Start development server
 npm run dev
@@ -38,7 +37,9 @@ npm run dev
 ### Environment Variables
 
 - `NEXT_PUBLIC_API_URL`: Proxy base path (default: `/api`). Requests are forwarded via Next.js route handler to the internal backend service.
-- `NEXT_PUBLIC_API_KEY`: API key for authentication (must match backend `API_SECRET_KEY`).
+- `API_SECRET_KEY`: API key for authentication (must match backend `API_SECRET_KEY`).
+- `BACKEND_URL`: Backend service URL (e.g., `http://localhost:8000/api`).
+- `CORS_ORIGINS`: Must include the frontend domain (e.g., `http://localhost:3000`).
 
 Root `.env` (used by docker-compose):
 - `API_SECRET_KEY`: Secret key used by the backend and injected by the server-side proxy.
@@ -87,8 +88,8 @@ This project supports Docker Compose.
 
 - Ensure the root `.env` is configured with:
   - `NEXT_PUBLIC_API_URL=/api`
-  - `NEXT_PUBLIC_API_KEY=...`
   - `API_SECRET_KEY=...`
+  - `BACKEND_URL=http://localhost:8000/api`
   - `CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000`
 
 - Start services:
