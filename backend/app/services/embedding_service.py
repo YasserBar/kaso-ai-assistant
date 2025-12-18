@@ -8,8 +8,12 @@ Supports multilingual text (Arabic + English)
 from typing import List, Optional
 import numpy as np
 from sentence_transformers import SentenceTransformer
+import logging
+import os
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class EmbeddingService:
@@ -33,11 +37,37 @@ class EmbeddingService:
         return cls._instance
     
     def initialize(self):
-        """Load the embedding model"""
+        """Load the embedding model with robust offline-aware config"""
         if self._model is None:
-            self._model = SentenceTransformer(settings.embedding_model)
-            # Warm up the model
-            _ = self._model.encode(["warmup"], show_progress_bar=False)
+            try:
+                # Determine cache directory based on environment
+                # Docker: /app/data/hf_cache, Local: ./data/hf_cache (relative to backend)
+                if os.environ.get("HF_HOME"):
+                    cache_dir = os.environ["HF_HOME"]
+                elif os.path.exists("/app/data"):
+                    # Running in Docker
+                    cache_dir = "/app/data/hf_cache"
+                else:
+                    # Running locally - use relative path from backend directory
+                    cache_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "hf_cache")
+
+                os.makedirs(cache_dir, exist_ok=True)
+
+                # Increase HF Hub timeouts significantly (5 minutes) to avoid ReadTimeoutError
+                os.environ["HF_HUB_DOWNLOAD_TIMEOUT"] = os.environ.get("HF_HUB_DOWNLOAD_TIMEOUT", "300")
+                os.environ["HF_HUB_ETAG_TIMEOUT"] = os.environ.get("HF_HUB_ETAG_TIMEOUT", "300")
+
+                logger.info(f"⏳ Loading embedding model: {settings.embedding_model} (cache: {cache_dir})")
+
+                # Initialize model with persistent cache
+                self._model = SentenceTransformer(
+                    settings.embedding_model,
+                    cache_folder=cache_dir
+                )
+                logger.info(f"✅ Embedding model loaded: {settings.embedding_model}")
+            except Exception as e:
+                logger.error(f"❌ Failed to load embedding model '{settings.embedding_model}': {e}")
+                raise
     
     @property
     def model(self) -> SentenceTransformer:

@@ -303,10 +303,10 @@ class TokenManager:
         if len(conversation_text) > 4000:
             conversation_text = conversation_text[:4000] + "...[truncated]"
 
-        summary_prompt = f"""Summarize the following conversation between a user and Kaso restaurant chatbot.
+        summary_prompt = f"""Summarize the following conversation between a user and Kaso B2B platform chatbot.
 
 CRITICAL REQUIREMENTS:
-1. Extract and preserve KEY FACTS mentioned (locations, prices, menu items, hours, contact info, etc.)
+1. Extract and preserve KEY FACTS mentioned (suppliers, products, orders, pricing, delivery info, platform features, etc.)
 2. Keep the summary under 200 words
 3. Use the SAME LANGUAGE as the conversation (Arabic or English)
 4. Focus on INFORMATION, not chit-chat or greetings
@@ -337,7 +337,7 @@ CONCISE SUMMARY (bullet points with key facts only):"""
         except Exception as e:
             # Fallback: simple truncation if summarization fails
             logger.error(f"Message summarization failed: {e}. Using simple fallback.")
-            return f"[Previous conversation: {len(messages)} messages about Kaso restaurant. Key context may be incomplete due to summarization failure.]"
+            return f"[Previous conversation: {len(messages)} messages about Kaso B2B platform. Key context may be incomplete due to summarization failure.]"
 
     def estimate_prompt_tokens(
         self,

@@ -30,26 +30,41 @@ class ConversationManager:
         """Initialize conversation manager with patterns and settings"""
 
         # Dependency indicators (signals that query needs context from history)
+        # UPDATED: Now includes 10+ languages for full multilingual support
         self.dependency_patterns = [
             # English pronouns and references
             r'\b(it|that|this|these|those|there|here)\b',
             # Arabic pronouns and references
             r'\b(هذا|ذلك|هناك|هنا|فيه|به|منه|عنه|ها|هم)\b',
-            # Follow-up question starters
-            r'^(what about|how about|and|also|too|أيضا|كمان|كذلك|و)\b',
+            # French (il, elle, ça, là, y)
+            r'\b(il|elle|ça|cela|là|y)\b',
+            # German (es, das, dort, da)
+            r'\b(es|das|dies|dort|da)\b',
+            # Spanish (eso, esto, allí, ahí)
+            r'\b(eso|esto|allí|ahí)\b',
+            # Follow-up question starters (multilingual)
+            r'^(what about|how about|and|also|too|أيضا|كمان|كذلك|و|et|aussi|und|auch|y|también)\b',
             # Vague references
             r'\b(one|ones|الواحد|الأول|الثاني)\b',
         ]
 
         # Entity indicators (signals that query is self-contained)
+        # UPDATED: Multilingual support for common restaurant terms
         self.entity_patterns = [
+            # Kaso (the restaurant name - universal)
             r'\b(kaso|كاسو|كازو)\b',
-            r'\b(menu|قائمة|منيو|مينو)\b',
-            r'\b(branch|فرع|فروع|location|موقع|عنوان)\b',
-            r'\b(price|سعر|أسعار|cost|تكلفة)\b',
-            r'\b(hours|ساعات|مواعيد|timing|وقت)\b',
-            r'\b(delivery|توصيل|طلب|order)\b',
-            r'\b(restaurant|مطعم|food|طعام|أكل)\b',
+            # Menu (English, Arabic, French, German, Spanish, etc.)
+            r'\b(menu|قائمة|منيو|مينو|menü|carte)\b',
+            # Branch/Location (multilingual)
+            r'\b(branch|فرع|فروع|location|موقع|عنوان|succursale|filiale|ubicación)\b',
+            # Price/Cost (multilingual)
+            r'\b(price|سعر|أسعار|cost|تكلفة|prix|preis|precio|cuánto|combien)\b',
+            # Hours/Time (multilingual)
+            r'\b(hours|ساعات|مواعيد|timing|وقت|horaires|öffnungszeiten|horarios)\b',
+            # Delivery/Order (multilingual)
+            r'\b(delivery|توصيل|طلب|order|livraison|lieferung|entrega|pedido)\b',
+            # B2B Platform/Supply Chain (multilingual)
+            r'\b(platform|منصة|supplier|مورد|supply chain|سلسلة التوريد|fournisseur|lieferant|proveedor)\b',
         ]
 
         logger.info("Conversation manager initialized")
@@ -201,9 +216,9 @@ New question: "What are the hours?"
 Reformulated: "What are the hours of Kaso branch in Nasr City?"
 
 Example 2:
-History: User asked "Do you have burgers?" Assistant said "Yes, we have beef and chicken burgers"
+History: User asked "What products do you have from suppliers?" Assistant said "We have dairy products, meat, and vegetables from various suppliers"
 New question: "How much is it?"
-Reformulated: "How much is the burger at Kaso?"
+Reformulated: "How much are the products at Kaso?"
 
 Example 3:
 History: User asked "أين يقع فرع كاسو؟" Assistant said "يقع في مدينة نصر"
@@ -211,9 +226,9 @@ New question: "ما ساعات العمل؟"
 Reformulated: "ما ساعات عمل فرع كاسو في مدينة نصر؟"
 
 Example 4 (already self-contained):
-History: User discussed burgers
-New question: "Where is Kaso restaurant located?"
-Reformulated: "Where is Kaso restaurant located?" (unchanged - already self-contained)
+History: User discussed suppliers
+New question: "Where is Kaso platform located?"
+Reformulated: "Where is Kaso platform located?" (unchanged - already self-contained)
 
 CONVERSATION HISTORY:
 {history_text}
